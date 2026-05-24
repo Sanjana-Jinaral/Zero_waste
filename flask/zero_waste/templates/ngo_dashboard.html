@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NGO Dashboard | Zero Waste Chain</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/ngo.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+</head>
+<body>
+
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <div class="cmd-logo" style="background:#059669; color:white;">
+                <i class="fa-solid fa-leaf"></i>
+            </div>
+            <div class="cmd-title">
+                <h2>Command Center</h2>
+                <span>Zero Waste Initiative</span>
+            </div>
+        </div>
+        
+        <nav class="nav-menu">
+            <a href="{{ url_for('ngo_dashboard') }}" class="nav-item active"><i class="fa-solid fa-border-all"></i> Dashboard</a>
+            <a href="javascript:alert('Surplus Map coming soon!')" class="nav-item"><i class="fa-solid fa-map-location-dot"></i> Surplus Map</a>
+            <a href="javascript:alert('Active Claims view coming soon!')" class="nav-item"><i class="fa-solid fa-clipboard-check"></i> Active Claims</a>
+            <a href="javascript:alert('Impact Tracking coming soon!')" class="nav-item"><i class="fa-solid fa-chart-line"></i> Impact Tracking</a>
+            <a href="javascript:alert('Listing Management coming soon!')" class="nav-item"><i class="fa-solid fa-list"></i> Listing Management</a>
+        </nav>
+
+        <div class="sidebar-footer">
+            <button class="btn-post" style="background:#064e3b;" onclick="alert('Custom Food Requests feature coming soon!')"><i class="fa-solid fa-plus"></i> Request Custom Food</button>
+            <button class="btn-post" id="btn-logout" style="margin-top: 10px; background-color: #f3f4f6; color: #ef4444;"><i class="fa-solid fa-right-from-bracket"></i> Log Out</button>
+        </div>
+    </aside>
+
+    <!-- Main Wrapper -->
+    <main class="main-wrapper">
+        
+        <!-- Topbar -->
+        <header class="topbar">
+            <div class="search-bar" style="width: 400px; margin-right: auto; margin-left: 0;">
+                <i class="fa-solid fa-search"></i>
+                <input type="text" placeholder="Search available food or organizations...">
+            </div>
+            
+            <div class="top-actions">
+                <div class="action-icon has-badge">
+                    <i class="fa-regular fa-bell"></i>
+                </div>
+                <div class="action-icon">
+                    <i class="fa-regular fa-circle-question"></i>
+                </div>
+                <div class="profile-widget">
+                    <div class="profile-info">
+                        <span class="profile-name" id="user-profile-name">Loading...</span>
+                        <span class="profile-role">LEAD COORDINATOR</span>
+                    </div>
+                    <img src="{{ url_for('static', filename='images/chef.png') }}" alt="Profile Avatar" class="profile-avatar">
+                </div>
+            </div>
+        </header>
+
+        <!-- Dashboard Content -->
+        <div class="dashboard-content" style="flex-direction: column;">
+            
+            <!-- Top Stats Row -->
+            <div class="ngo-stats-row">
+                <div class="stat-card ngo-card">
+                    <i class="fa-solid fa-leaf bg-icon"></i>
+                    <div class="ngo-card-content">
+                        <div class="stat-label">Total Rescued</div>
+                        <div class="stat-value" style="color: #059669;">12,482 <small>kg</small></div>
+                        <div class="stat-subtext"><i class="fa-solid fa-arrow-trend-up"></i> +14% from last month</div>
+                    </div>
+                </div>
+                <div class="stat-card ngo-card" style="background: #e6f7ec;">
+                    <div class="ngo-card-content">
+                        <div class="stat-label" style="color: #064e3b;">Active Claims</div>
+                        <div class="stat-value" style="color: #064e3b;">08</div>
+                        <div class="stat-subtext" style="color: #0d8a43; font-style: italic;"><i class="fa-solid fa-bolt"></i> 4 pickups scheduled for today</div>
+                    </div>
+                </div>
+                <div class="stat-card ngo-card">
+                    <div class="ngo-card-content">
+                        <div class="stat-label">Volunteers Active</div>
+                        <div class="stat-value" style="color: #1e3a8a;">24</div>
+                        <div class="avatar-stack">
+                            <img src="{{ url_for('static', filename='images/chef.png') }}" alt="v">
+                            <img src="{{ url_for('static', filename='images/chef.png') }}" alt="v">
+                            <img src="{{ url_for('static', filename='images/chef.png') }}" alt="v">
+                            <div class="more">+21</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Main Layout: 2 Columns -->
+            <div style="display: flex; gap: 30px;">
+                
+                <!-- Left Column -->
+                <div class="main-column" style="flex: 2;">
+                    
+                    <div class="section-header">
+                        <h3>Live Surplus Map</h3>
+                        <span class="live-points">12 Live Points</span>
+                    </div>
+
+                    <div class="map-container" style="height: 400px; position: relative; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.05);">
+                        <div id="surplus-map" style="width: 100%; height: 100%; z-index: 1;"></div>
+                        
+                        <div class="map-filters" style="position: absolute; top: 10px; right: 10px; z-index: 1000; background: white; padding: 10px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); display: flex; gap: 10px; font-size: 0.85rem;">
+                            <div class="filter-item">
+                                <span class="filter-label" style="color:var(--text-muted);">Radius</span>
+                                <span class="filter-value" style="font-weight:600;">5.0 km</span>
+                            </div>
+                            <div class="filter-item">
+                                <span class="filter-label" style="color:var(--text-muted);">Type</span>
+                                <span class="filter-value" style="font-weight:600;">All Food</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="section-header" style="margin-top: 40px;">
+                        <h3>My Active Claims</h3>
+                        <a href="javascript:alert('Full list view coming soon!')" class="view-all">View all claims</a>
+                    </div>
+
+                    <div id="claims-container" style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                        <div style="text-align: center; grid-column: span 2; padding: 20px; color: var(--text-muted);">
+                            Loading your claims...
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- Right Column -->
+                <div class="side-column">
+                    
+                    <div class="section-header">
+                        <h3>Available Now</h3>
+                    </div>
+
+                    <div class="available-feed" id="available-feed-container">
+                        <div style="text-align: center; padding: 20px; color: var(--text-muted);">
+                            Scanning for available surplus...
+                        </div>
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </main>
+
+    <!-- Floating Map Button -->
+    <div class="floating-map-btn">
+        <i class="fa-solid fa-map"></i>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const token = localStorage.getItem('token');
+            const userStr = localStorage.getItem('user');
+            
+            if (!token || !userStr) {
+                window.location.href = '/login';
+                return;
+            }
+
+            const user = JSON.parse(userStr);
+            document.getElementById('user-profile-name').innerText = user.name;
+            
+            // Logout
+            document.getElementById('btn-logout').addEventListener('click', () => {
+                localStorage.removeItem('token');
+                localStorage.removeItem('user');
+                window.location.href = '/login';
+            });
+
+            // Map Initialization
+            const map = L.map('surplus-map').setView([47.6062, -122.3321], 12); // Default Seattle
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; OpenStreetMap contributors'
+            }).addTo(map);
+
+            const markers = {}; // Store markers by listing ID
+
+            // Try to get user location to center map
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(pos => {
+                    map.setView([pos.coords.latitude, pos.coords.longitude], 13);
+                });
+            }
+
+            // Socket.IO Setup
+            const socket = io();
+            socket.on('connect', () => console.log('Connected to real-time feed'));
+            
+            socket.on('new_food_posted', (listing) => {
+                // Add marker if it has coordinates
+                if (listing.latitude && listing.longitude) {
+                    addMarkerToMap(listing);
+                }
+                // Refresh the available feed list
+                loadAvailableFood();
+            });
+
+            socket.on('food_claimed', (data) => {
+                // Remove marker from map
+                if (markers[data.listing_id]) {
+                    map.removeLayer(markers[data.listing_id]);
+                    delete markers[data.listing_id];
+                }
+                // Refresh the feed
+                loadAvailableFood();
+            });
+
+            function addMarkerToMap(listing) {
+                const marker = L.marker([listing.latitude, listing.longitude]).addTo(map);
+                marker.bindPopup(`
+                    <div style="font-family: 'Inter', sans-serif;">
+                        <h4 style="margin: 0 0 5px 0; font-size: 1rem; color: #111827;">${listing.title}</h4>
+                        <p style="margin: 0 0 5px 0; font-size: 0.85rem; color: #4b5563;"><i class="fa-solid fa-box"></i> ${listing.quantity || 'Available'}</p>
+                        <p style="margin: 0 0 10px 0; font-size: 0.85rem; color: #4b5563;"><i class="fa-solid fa-location-dot"></i> ${listing.pickup_address}</p>
+                        <button onclick="claimFood(${listing.id})" style="width: 100%; padding: 8px; background: #059669; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">Claim Now</button>
+                    </div>
+                `);
+                markers[listing.id] = marker;
+            }
+
+            // Load Map Data
+            async function loadMapMarkers() {
+                try {
+                    const res = await fetch('/api/map/listings', {
+                        headers: { 'Authorization': 'Bearer ' + token }
+                    });
+                    const data = await res.json();
+                    
+                    data.features.forEach(feature => {
+                        const listing = feature.properties;
+                        listing.longitude = feature.geometry.coordinates[0];
+                        listing.latitude = feature.geometry.coordinates[1];
+                        addMarkerToMap(listing);
+                    });
+                } catch (err) {
+                    console.error("Error loading map markers", err);
+                }
+            }
+
+            // Load Available Food (List view)
+            async function loadAvailableFood() {
+                try {
+                    const res = await fetch('/api/food/', {
+                        headers: { 'Authorization': 'Bearer ' + token }
+                    });
+                    const listings = await res.json();
+                    const container = document.getElementById('available-feed-container');
+                    
+                    if (listings.length === 0) {
+                        container.innerHTML = '<div style="text-align: center; padding: 20px; color: var(--text-muted);">No available surplus found right now.</div>';
+                        return;
+                    }
+
+                    container.innerHTML = listings.map(l => {
+                        let tagClass = 'tag-fresh';
+                        if (l.food_type.includes('Bakery')) tagClass = 'tag-bakery';
+                        
+                        return `
+                        <div class="available-card">
+                            <div class="avail-header">
+                                <span class="avail-tag ${tagClass}">${l.food_type.toUpperCase()}</span>
+                                <span class="avail-time"><i class="fa-regular fa-clock"></i> Just now</span>
+                            </div>
+                            <h4>${l.title}</h4>
+                            <div class="avail-location">
+                                <i class="fa-solid fa-location-dot"></i> ${l.pickup_address}
+                            </div>
+                            <div class="avail-footer">
+                                <span class="avail-qty">Qty: <strong>${l.quantity}</strong></span>
+                                <button class="btn-claim" onclick="claimFood(${l.id})">Claim Now</button>
+                            </div>
+                        </div>
+                        `;
+                    }).join('');
+                } catch (err) {
+                    console.error("Error loading feed", err);
+                }
+            }
+
+            // Load My Claims
+            async function loadClaims() {
+                try {
+                    const res = await fetch('/api/food/my_claims', {
+                        headers: { 'Authorization': 'Bearer ' + token }
+                    });
+                    const claims = await res.json();
+                    const container = document.getElementById('claims-container');
+                    
+                    if (claims.length === 0) {
+                        container.innerHTML = '<div style="text-align: center; grid-column: span 2; padding: 20px; color: var(--text-muted);">You have no active claims.</div>';
+                        return;
+                    }
+
+                    container.innerHTML = claims.map(c => {
+                        const listing = c.listing || { title: 'Unknown', pickup_address: 'Unknown' };
+                        return `
+                        <div class="claim-progress-box">
+                            <div class="claim-header">
+                                <div class="claim-icon ${c.status === 'pending' ? 'orange' : ''}"><i class="fa-solid fa-box-open"></i></div>
+                                <div class="claim-title">
+                                    <h4>Claim #${c.id.toString().padStart(4, '0')} - ${listing.title}</h4>
+                                    <p>Pick-up from: ${listing.pickup_address}</p>
+                                </div>
+                                <span class="claim-status ${c.status === 'in_route' ? 'in-route' : 'pending'}">${c.status.toUpperCase()}</span>
+                            </div>
+                            <div class="progress-container">
+                                <div class="progress-labels">
+                                    <span>Progress</span>
+                                    <span>${c.status === 'pending' ? '20%' : '75%'}</span>
+                                </div>
+                                <div class="progress-track">
+                                    <div class="progress-fill ${c.status === 'pending' ? 'orange' : ''}" style="width: ${c.status === 'pending' ? '20%' : '75%'};"></div>
+                                </div>
+                            </div>
+                            <div class="volunteer-info">
+                                <img src="/static/images/chef.png" class="avatar-sm">
+                                <div class="volunteer-details">
+                                    <h5>Pending Assignment</h5>
+                                    <p>Volunteer Network</p>
+                                </div>
+                                <button class="btn-chat"><i class="fa-regular fa-comment"></i></button>
+                            </div>
+                        </div>
+                        `;
+                    }).join('');
+                } catch (err) {
+                    console.error("Error loading claims", err);
+                }
+            }
+
+            // Define Claim action globally
+            window.claimFood = async function(listingId) {
+                if (!confirm("Are you sure you want to claim this surplus?")) return;
+                
+                try {
+                    const res = await fetch('/api/food/claim/' + listingId, {
+                        method: 'POST',
+                        headers: { 'Authorization': 'Bearer ' + token }
+                    });
+                    
+                    if (res.ok) {
+                        alert("Successfully claimed!");
+                        loadAvailableFood();
+                        loadClaims();
+                    } else {
+                        const errorData = await res.json();
+                        alert("Error: " + errorData.message);
+                    }
+                } catch (err) {
+                    alert("Connection error.");
+                }
+            };
+
+            loadAvailableFood();
+            loadClaims();
+            loadMapMarkers();
+        });
+    </script>
+</body>
+</html>

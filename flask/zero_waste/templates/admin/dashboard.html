@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+
+{% block title %}Admin Center - Zero Waste Chain{% endblock %}
+
+{% block content %}
+<div style="margin-bottom: 2rem;">
+    <h1>Admin Command Center</h1>
+</div>
+
+<div class="dashboard-grid">
+    <div class="card">
+        <h3>Platform Overview</h3>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 1.5rem;">
+            <div style="background: var(--bg); padding: 1rem; border-radius: 0.5rem;">
+                <p style="font-size: 0.75rem; color: var(--text-muted);">Total Users</p>
+                <h2 style="margin: 0;">{{ users|length }}</h2>
+            </div>
+            <div style="background: var(--bg); padding: 1rem; border-radius: 0.5rem;">
+                <p style="font-size: 0.75rem; color: var(--text-muted);">Active Listings</p>
+                <h2 style="margin: 0;">{{ listings|length }}</h2>
+            </div>
+        </div>
+    </div>
+
+    <div class="card" style="grid-column: span 2;">
+        <h3>Recent User Activity</h3>
+        <table style="width: 100%; border-collapse: collapse; margin-top: 1rem;">
+            <thead>
+                <tr style="text-align: left; border-bottom: 2px solid var(--border);">
+                    <th style="padding: 0.75rem;">Username</th>
+                    <th style="padding: 0.75rem;">Email</th>
+                    <th style="padding: 0.75rem;">Role</th>
+                    <th style="padding: 0.75rem;">Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for user in users %}
+                <tr style="border-bottom: 1px solid var(--border);">
+                    <td style="padding: 0.75rem;">{{ user.username }}</td>
+                    <td style="padding: 0.75rem;">{{ user.email }}</td>
+                    <td style="padding: 0.75rem;">
+                        <span style="font-size: 0.75rem; background: #eee; padding: 0.2rem 0.5rem; border-radius: 0.2rem;">{{ user.role|upper }}</span>
+                    </td>
+                    <td style="padding: 0.75rem;">
+                        <button class="btn" style="padding: 0.25rem 0.5rem; font-size: 0.75rem; border: 1px solid var(--danger); color: var(--danger);">Suspend</button>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

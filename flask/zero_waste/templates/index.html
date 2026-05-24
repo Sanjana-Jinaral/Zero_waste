@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+    .hero-section { padding: 100px 0; text-align: center; background: radial-gradient(circle at top right, #dcfce7 0%, transparent 40%); }
+    .hero-tag { background: #dcfce7; color: #166534; padding: 8px 20px; border-radius: 30px; font-weight: 700; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; display: inline-block; margin-bottom: 20px; }
+    .hero-title { font-size: 4.5rem; font-weight: 900; line-height: 1.1; margin-bottom: 25px; color: #111827; }
+    .hero-title span { background: linear-gradient(to right, #10b981, #3b82f6); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .live-mission-ticker { background: white; padding: 15px 30px; border-radius: 50px; box-shadow: 0 10px 30px rgba(0,0,0,0.05); display: inline-flex; align-items: center; gap: 15px; margin-top: 40px; font-weight: 600; font-size: 0.9rem; }
+    .ticker-pulse { width: 10px; height: 10px; background: #10b981; border-radius: 50%; position: relative; }
+    .ticker-pulse::after { content: ''; position: absolute; inset: 0; background: inherit; border-radius: 50%; animation: pulse 2s infinite; }
+    @keyframes pulse { 0% { transform: scale(1); opacity: 1; } 100% { transform: scale(3); opacity: 0; } }
+    .feature-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 30px; margin-top: 80px; }
+    .feature-card { padding: 40px; border-radius: 2rem; background: white; border: 1px solid #f3f4f6; transition: 0.3s; text-align: left; }
+    .feature-card:hover { transform: translateY(-10px); box-shadow: 0 20px 40px rgba(0,0,0,0.05); border-color: #10b981; }
+    .feature-icon { width: 60px; height: 60px; border-radius: 15px; background: #f0fdf4; color: #10b981; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; margin-bottom: 25px; }
+</style>
+
+<div class="hero-section">
+    <div class="hero-tag">🚀 Real-Time Food Redistribution</div>
+    <h1 class="hero-title">
+        Eliminate Waste.<br><span>Nourish Communities.</span>
+    </h1>
+    <p style="font-size: 1.4rem; color: #6b7280; max-width: 700px; margin: 0 auto 40px; line-height: 1.6;">
+        Zero Waste Chain is the intelligent logistics layer connecting surplus food donors with NGOs through a network of local heroes.
+    </p>
+    <div style="display: flex; gap: 15px; justify-content: center;">
+        <a href="{{ url_for('auth.register') }}" class="btn btn-primary" style="padding: 18px 40px; font-size: 1.1rem; border-radius: 15px; font-weight: 800; box-shadow: 0 10px 20px rgba(16, 185, 129, 0.2);">Join the Mission</a>
+        <a href="#how-it-works" class="btn" style="padding: 18px 40px; font-size: 1.1rem; border-radius: 15px; font-weight: 700; border: 2px solid #e5e7eb; background: white;">Watch how it works</a>
+    </div>
+
+    <div class="live-mission-ticker">
+        <div class="ticker-pulse"></div>
+        <span>LIVE: <span id="active-deliveries-count" style="color: #3b82f6;">{{ active_deliveries|default(0) }} Active Deliveries</span> in your area</span>
+        <div style="width: 1px; height: 20px; background: #e5e7eb;"></div>
+        <span id="rescued-kg-count" style="color: #6b7280;">{{ rescued_kg|default(0) }} kg rescued today</span>
+    </div>
+</div>
+
+<script>
+    setInterval(async () => {
+        try {
+            const response = await fetch('/api/live_metrics');
+            const data = await response.json();
+            document.getElementById('active-deliveries-count').innerText = `${data.active_deliveries} Active Deliveries`;
+            document.getElementById('rescued-kg-count').innerText = `${data.rescued_kg} kg rescued today`;
+        } catch (e) {
+            console.error("Failed to fetch live metrics", e);
+        }
+    }, 10000); // Update every 10 seconds
+</script>
+
+<div id="how-it-works" style="padding: 100px 0;">
+    <h2 style="text-align: center; font-size: 2.5rem; font-weight: 900; margin-bottom: 60px;">The Journey of a <span style="color: var(--primary);">Meal</span></h2>
+    <div class="feature-grid">
+        <div class="feature-card">
+            <div class="feature-icon"><i class="fa-solid fa-store"></i></div>
+            <h3 style="font-size: 1.5rem; margin-bottom: 15px;">1. Listing</h3>
+            <p style="color: #6b7280; line-height: 1.6;">Restaurants and stores list surplus food in seconds. Our AI notifies nearby NGOs and volunteers immediately.</p>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon" style="background: #eff6ff; color: #3b82f6;"><i class="fa-solid fa-truck-fast"></i></div>
+            <h3 style="font-size: 1.5rem; margin-bottom: 15px;">2. Logistics</h3>
+            <p style="color: #6b7280; line-height: 1.6;">A volunteer hero accepts the mission. Real-time GPS tracking ensures a seamless, safe, and transparent delivery.</p>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon" style="background: #fdf2f8; color: #db2777;"><i class="fa-solid fa-heart-pulse"></i></div>
+            <h3 style="font-size: 1.5rem; margin-bottom: 15px;">3. Impact</h3>
+            <p style="color: #6b7280; line-height: 1.6;">Food reaches the needy within hours. Donors and volunteers track their CO2 savings and community points.</p>
+        </div>
+    </div>
+</div>
+
+<footer style="margin-top: 100px; padding: 60px 0; border-top: 1px solid #f3f4f6; background: #f9fafb;">
+    <div style="max-width: 1200px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center;">
+        <div>
+            <div style="font-weight: 900; font-size: 1.5rem; color: #111827; margin-bottom: 10px;">
+                <i class="fa-solid fa-leaf" style="color: #10b981;"></i> Zero Waste Chain
+            </div>
+            <p style="color: #6b7280;">&copy; 2024 Zero Waste Chain. Engineered by Sanjana Jinaral.</p>
+        </div>
+        <div style="display: flex; gap: 20px;">
+            <a href="#" style="color: #6b7280; font-size: 1.5rem;"><i class="fa-brands fa-twitter"></i></a>
+            <a href="#" style="color: #6b7280; font-size: 1.5rem;"><i class="fa-brands fa-instagram"></i></a>
+            <a href="#" style="color: #6b7280; font-size: 1.5rem;"><i class="fa-brands fa-linkedin"></i></a>
+        </div>
+    </div>
+</footer>
+{% endblock %}

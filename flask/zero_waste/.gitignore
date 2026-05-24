@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Environments
+.env
+.venv/
+venv/
+env/
+ENV/
+pyvenv.cfg
+.venv
+
+# Database / Flask Instance
+instance/
+
+# Flask Uploads
+static/uploads/
+
+# IDEs/Editors
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?

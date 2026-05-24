@@ -1,0 +1,517 @@
+{% extends "base.html" %}
+
+{% block title %}NGO Dashboard - Zero Waste Chain{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<link rel="stylesheet" href="{{ url_for('static', filename='css/tracker.css') }}">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+    .delivery-tracker-container { height: 550px; margin-bottom: 2rem; border-radius: 1.5rem; }
+    .tracker-sidebar { width: 350px; }
+    .tracker-card { padding: 15px; margin-bottom: 12px; }
+    .volunteer-info-footer { padding-top: 12px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div style="margin-bottom: 2rem;">
+    <h1>NGO Dashboard</h1>
+    <p style="color: var(--text-muted);">Real-time Logistics & Surplus Tracking</p>
+</div>
+
+<!-- Delivery Tracker Section (Replaces Big Map) -->
+<div class="delivery-tracker-container">
+    <aside class="tracker-sidebar">
+        <div class="tracker-sidebar-header">
+            <h2 style="font-size: 1.1rem;">Active Deliveries</h2>
+            <i class="fa-solid fa-truck-fast" style="color: var(--primary);"></i>
+        </div>
+        <div class="tracker-list" id="tracker-list">
+            {% if my_claims %}
+                {% for claim in my_claims %}
+                    <div class="tracker-card {% if loop.first %}active{% endif %}" onclick="focusOrder({{ claim.id }}, this)">
+                        <div class="card-header">
+                            <div class="order-id">#{{ claim.id|string|truncate(6, True, '') }}</div>
+                            <span class="status-badge {{ claim.status }}">{{ claim.status|upper }}</span>
+                        </div>
+                        <div class="track-progress">
+                            <div class="track-line"></div>
+                            <div class="track-fill" style="width: {% if claim.status == 'pending' %}20{% elif claim.status == 'in_transit' %}60{% else %}100{% endif %}%"></div>
+                            <div class="dots" style="display:flex; justify-content:space-between; width:100%; position:absolute; z-index:2;">
+                                <div class="dot completed"></div>
+                                <div class="dot {% if claim.status != 'pending' %}completed{% endif %}"></div>
+                                <div class="dot {% if claim.status == 'delivered' %}completed{% endif %}"></div>
+                            </div>
+                        </div>
+                        <div class="address-info" style="margin-top: 10px; display: flex; justify-content: space-between; align-items: flex-end;">
+                            <div>
+                                <p style="font-size: 0.8rem; color: var(--text-muted);"><i class="fa-solid fa-location-dot" style="color:#10b981;"></i> {{ claim.listing.address|truncate(40) }}</p>
+                                <p style="font-size: 0.8rem; color: var(--text-muted);"><i class="fa-solid fa-house" style="color:#3b82f6;"></i> {{ current_user.address|default('Your Center')|truncate(40) }}</p>
+                            </div>
+                            {% if claim.delivery and claim.status != 'delivered' %}
+                                <div class="otp-badge" style="text-align: right; background: #f0fdf4; padding: 5px 10px; border-radius: 8px; border: 1px dashed #10b981;">
+                                    <span style="display: block; font-size: 0.65rem; color: #059669; font-weight: 700; text-transform: uppercase;">OTP Code</span>
+                                    <span style="font-size: 1rem; font-weight: 800; color: #064e3b; letter-spacing: 1px;">{{ claim.delivery[0].otp }}</span>
+                                </div>
+                            {% endif %}
+                        </div>
+                        {% if claim.delivery %}
+                        <div class="volunteer-info-footer" style="margin-top: 12px; border-top: 1px solid #f3f4f6; padding-top: 10px; display: flex; align-items: center; gap: 10px;">
+                            <img src="{{ url_for('static', filename='images/chef.png') }}" style="width: 24px; height: 24px; border-radius: 50%;">
+                            <div style="font-size: 0.75rem;">
+                                <span style="color: var(--text-muted);">Volunteer:</span> 
+                                <span style="font-weight: 600;">{{ claim.delivery[0].volunteer.username if claim.delivery[0].volunteer else 'Assigning...' }}</span>
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                {% endfor %}
+            {% else %}
+                <div style="text-align: center; padding: 40px; color: var(--text-muted);">
+                    <p>No active deliveries to track.</p>
+                </div>
+            {% endif %}
+        </div>
+    </aside>
+    
+    <div class="tracker-map-area">
+        <div id="map" style="width: 100%; height: 100%;"></div>
+        <div class="map-overlay-info" id="map-order-tag" style="transition: 0.3s; pointer-events: none;">Select a delivery to track</div>
+        
+        <!-- Floating Controls -->
+        <div style="position: absolute; top: 20px; right: 20px; z-index: 1000; display: flex; flex-direction: column; gap: 10px;">
+            <button onclick="zoomToNGO()" class="btn btn-secondary" title="Go to NGO Location" style="width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; background: white; box-shadow: 0 4px 12px rgba(0,0,0,0.15); border: none; cursor: pointer;">
+                <i class="fa-solid fa-building" style="color: var(--primary);"></i>
+            </button>
+            <button onclick="zoomToCurrent()" class="btn btn-secondary" title="Use GPS Location" style="width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; background: white; box-shadow: 0 4px 12px rgba(0,0,0,0.15); border: none; cursor: pointer;">
+                <i class="fa-solid fa-location-crosshairs" style="color: #3b82f6;"></i>
+            </button>
+        </div>
+    </div>
+</div>
+
+<div class="dashboard-grid">
+        <div class="card">
+        <h3>Available Food Near You</h3>
+        <div id="food-list" style="margin-top: 1rem; display: grid; gap: 1rem;">
+            {% for food in available_food %}
+                <div class="card food-card" data-food-id="{{ food.id }}" data-expiry-time="{{ food.expiry_time.isoformat() }}Z" style="padding: 1.25rem; border-color: var(--border); position: relative; overflow: hidden; display: flex; gap: 20px; align-items: flex-start; transition: all 0.5s ease;">
+                    {% if food.distance and food.distance < 2 %}
+                        <div style="position: absolute; top: 10px; right: -30px; background: #10b981; color: white; padding: 5px 40px; transform: rotate(45deg); font-size: 0.65rem; font-weight: 800; letter-spacing: 0.5px; z-index: 1;">NEAR YOU</div>
+                    {% endif %}
+                    
+                    <!-- Left side: Gorgeous Image -->
+                    <div style="width: 120px; height: 120px; flex-shrink: 0; border-radius: 12px; overflow: hidden; border: 1px solid var(--border); background: #f3f4f6; display: flex; align-items: center; justify-content: center; position: relative;">
+                        {% if food.image_url %}
+                            <img src="{{ food.image_url }}" alt="{{ food.title }}" style="width: 100%; height: 100%; object-fit: cover;">
+                        {% else %}
+                            <div style="display: flex; flex-direction: column; align-items: center; gap: 5px;">
+                                <i class="fa-solid fa-utensils" style="color: #9ca3af; font-size: 2.2rem;"></i>
+                                <span style="font-size: 0.65rem; color: #9ca3af; font-weight: 700; text-transform: uppercase;">No Photo</span>
+                            </div>
+                        {% endif %}
+                    </div>
+                    
+                    <!-- Right side: Content details -->
+                    <div style="flex: 1; display: flex; justify-content: space-between; align-items: start;">
+                        <div>
+                            <h4 style="margin: 0; font-size: 1.1rem; color: var(--text);">{{ food.title }}</h4>
+                            <div style="display: flex; align-items: center; gap: 10px; margin-top: 5px;">
+                                <span style="font-size: 0.8rem; background: #f3f4f6; padding: 2px 8px; border-radius: 4px; color: var(--text-muted);">
+                                    <i class="fa-solid fa-location-arrow" style="font-size: 0.7rem;"></i> {{ "%.1f"|format(food.distance) if food.distance else "?" }} km
+                                </span>
+                                <span class="expiry-badge" style="font-size: 0.8rem; background: {% if food.is_expired %}#fee2e2; color: #ef4444;{% else %}#fff7ed; color: #f59e0b;{% endif %} padding: 2px 8px; border-radius: 4px; display: inline-flex; align-items: center; gap: 4px; transition: all 0.3s ease;">
+                                    <i class="fa-solid fa-clock" style="font-size: 0.7rem;"></i> <span class="expiry-text">{{ food.expiry_status }}</span>
+                                </span>
+                            </div>
+                            <p style="font-size: 0.875rem; color: var(--text-muted); margin-top: 8px;">
+                                <i class="fa-solid fa-building" style="color: #9ca3af; margin-right: 4px;"></i> {{ food.donor.organization_name or food.donor.username }} • {{ food.quantity }}
+                            </p>
+
+                            <!-- Food Safety Certificate Section -->
+                            <div style="margin-top: 15px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 12px;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                                    <span style="font-size: 0.7rem; font-weight: 800; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px;">Food Safety Pass</span>
+                                    <i class="fa-solid fa-shield-check" style="color: #10b981;"></i>
+                                </div>
+                                
+                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 0.75rem;">
+                                    <div>
+                                        <span style="color: var(--text-muted);">Prepared:</span><br>
+                                        <span style="font-weight: 600; color: var(--text);">{{ food.prepared_at.strftime('%I:%M %p') if food.prepared_at else 'N/A' }}</span>
+                                    </div>
+                                    <div>
+                                        <span style="color: var(--text-muted);">Temp:</span><br>
+                                        <span style="font-weight: 600; color: {% if food.temp_category == 'Hot' %}#ef4444{% elif food.temp_category == 'Cold' %}#3b82f6{% else %}#6b7280{% endif %};">
+                                            {{ food.temp_category or 'Room Temp' }}
+                                        </span>
+                                    </div>
+                                    <div style="grid-column: span 2;">
+                                        <span style="color: var(--text-muted);">Allergens:</span>
+                                        <span style="font-weight: 600; color: #b91c1c;">{{ food.allergens or 'None reported' }}</span>
+                                    </div>
+                                </div>
+
+                                <div style="margin-top: 10px; border-top: 1px dashed #cbd5e1; padding-top: 8px;">
+                                    <div style="display: flex; flex-wrap: wrap; gap: 5px;">
+                                        {% if food.quality_checks %}
+                                            {% for check in food.quality_checks.split(', ') %}
+                                                <span style="font-size: 0.65rem; background: #f0fdf4; color: #166534; padding: 2px 6px; border-radius: 4px; display: flex; align-items: center; gap: 3px;">
+                                                    <i class="fa-solid fa-check" style="font-size: 0.6rem;"></i> {{ check }}
+                                                </span>
+                                            {% endfor %}
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                
+                                <p style="font-size: 0.65rem; color: #94a3b8; margin-top: 8px; font-style: italic; line-height: 1.2;">
+                                    * Donor has accepted liability for food quality at time of pickup.
+                                </p>
+                            </div>
+                        </div>
+                        <form action="{{ url_for('ngo.claim_food', listing_id=food.id) }}" method="POST" style="margin-left: 15px;">
+                            <button type="submit" class="btn btn-primary" style="padding: 0.6rem 1.2rem; font-size: 0.9rem; border-radius: 10px; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2); white-space: nowrap;">Claim Food</button>
+                        </form>
+                    </div>
+                </div>
+            {% endfor %}
+            {% if not available_food %}
+                <div style="text-align: center; padding: 40px; background: #f9fafb; border-radius: 12px; border: 2px dashed #e5e7eb;">
+                    <i class="fa-solid fa-box-open" style="font-size: 2rem; color: #d1d5db; margin-bottom: 10px; display: block;"></i>
+                    <p style="color: var(--text-muted);">No food listings available in your area right now.</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function() {
+    // NGO Location (Defaults to Nagpur/Central India if not set)
+    const ngoLat = parseFloat("{{ current_user.latitude | default(20.5937, true) }}");
+    const ngoLng = parseFloat("{{ current_user.longitude | default(78.9629, true) }}");
+
+    // Initialize map
+    const map = L.map('map', { zoomControl: true }).setView([ngoLat, ngoLng], 12);
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+        attribution: '&copy; CartoDB'
+    }).addTo(map);
+
+    let routeLine = null;
+    let truckMarker = null;
+    const markers = {
+        food: {},
+        tracking: {}
+    };
+
+    // Custom Icons
+    const ngoIcon = L.divIcon({
+        className: 'custom-marker',
+        html: '<div class="dropoff-marker" style="background:#3b82f6; border:2px solid white; box-shadow:0 0 10px rgba(59,130,246,0.5);"></div>',
+        iconSize: [16, 16], iconAnchor: [8, 8]
+    });
+
+    // NGO Center Marker
+    L.marker([ngoLat, ngoLng], { icon: ngoIcon }).addTo(map).bindPopup("Your Center");
+
+    // Data from Jinja - Refactored for safety
+    const claims = [
+        {% for claim in my_claims %}
+        {% if claim.listing %}
+        {
+            id: {{ claim.id | tojson }},
+            status: {{ claim.status | tojson }},
+            listing: {
+                title: {{ claim.listing.title | default('Untitled') | tojson }},
+                latitude: {{ claim.listing.latitude | default(0) | tojson }},
+                longitude: {{ claim.listing.longitude | default(0) | tojson }},
+                address: {{ claim.listing.address | default('') | tojson }}
+            }
+        },
+        {% endif %}
+        {% endfor %}
+    ];
+
+    window.focusOrder = function(orderId, element) {
+        console.log("Focusing order:", orderId);
+        
+        if (element) {
+            document.querySelectorAll('.tracker-card').forEach(el => el.classList.remove('active'));
+            element.classList.add('active');
+        }
+
+        const claim = claims.find(c => c.id === orderId);
+        if (!claim) return;
+
+        const tag = document.getElementById('map-order-tag');
+        tag.innerText = `Tracking: ${claim.listing.title}`;
+        tag.style.background = "rgba(37, 99, 235, 0.9)";
+        tag.style.color = "white";
+        tag.style.fontSize = "0.8rem";
+        tag.style.padding = "8px 15px";
+
+        // Clear previous tracking visuals
+        if (routeLine) map.removeLayer(routeLine);
+        if (truckMarker) map.removeLayer(truckMarker);
+        if (markers.tracking.pickup) map.removeLayer(markers.tracking.pickup);
+
+        // Fallback to a nearby location if coordinates are missing
+        let cLat = claim.listing.latitude;
+        let cLng = claim.listing.longitude;
+        
+        if (!cLat || !cLng || cLat === 0) {
+            // Offset roughly ~3km from NGO if donor location is missing
+            cLat = ngoLat + 0.025;
+            cLng = ngoLng + 0.025;
+        }
+
+        const pickup = [cLat, cLng];
+        const dropoff = [ngoLat, ngoLng];
+
+        // Add Pickup marker
+        markers.tracking.pickup = L.marker(pickup, {
+            icon: L.divIcon({ 
+                className: 'custom-marker', 
+                html: '<div class="pickup-marker" style="background:#ef4444; border:2px solid white;"></div>',
+                iconSize: [14, 14], iconAnchor: [7, 7]
+            })
+        }).addTo(map);
+
+        // Draw Route
+        routeLine = L.polyline([pickup, dropoff], {
+            color: '#2563eb', weight: 4, opacity: 0.5, dashArray: '8, 8'
+        }).addTo(map);
+
+        // Animated Truck
+        const truckIcon = L.divIcon({
+            className: 'custom-marker',
+            html: `
+                <div class="truck-marker-container">
+                    <div class="pulse-ring" style="border-color:#2563eb;"></div>
+                    <div style="background:white; width:30px; height:30px; border-radius:50%; display:flex; align-items:center; justify-content:center; box-shadow:0 2px 8px rgba(0,0,0,0.2); border:2px solid #2563eb;">
+                        <i class="fa-solid fa-truck" style="color:#2563eb; font-size:12px;"></i>
+                    </div>
+                </div>
+            `,
+            iconSize: [30, 30], iconAnchor: [15, 15]
+        });
+
+        // Clear any previous animation interval
+        if (window.truckAnimationInterval) clearInterval(window.truckAnimationInterval);
+
+        let truckPos = pickup;
+        if (claim.status === 'in_route' || claim.status === 'in_transit') {
+            // START LIVE TRACKER SIMULATION
+            let progress = 0.0;
+            truckPos = [ pickup[0], pickup[1] ];
+            truckMarker = L.marker(truckPos, { icon: truckIcon }).addTo(map);
+            
+            window.truckAnimationInterval = setInterval(() => {
+                progress += 0.01; // Move 1% every 300ms
+                if (progress >= 0.95) progress = 0.95; // Stop right before the destination
+                
+                const currentLat = pickup[0] + (dropoff[0] - pickup[0]) * progress;
+                const currentLng = pickup[1] + (dropoff[1] - pickup[1]) * progress;
+                
+                truckMarker.setLatLng([currentLat, currentLng]);
+                
+                // Add a cool tracking pulse effect randomly
+                if (Math.random() > 0.8) {
+                    const tag = document.getElementById('map-order-tag');
+                    tag.style.background = "#10b981"; // Flash green
+                    setTimeout(() => tag.style.background = "rgba(37, 99, 235, 0.9)", 300);
+                }
+            }, 300); // Smooth rapid updates
+        } else if (claim.status === 'delivered') {
+            truckPos = dropoff;
+            truckMarker = L.marker(truckPos, { icon: truckIcon }).addTo(map);
+        } else {
+            truckMarker = L.marker(truckPos, { icon: truckIcon }).addTo(map);
+        }
+
+        map.fitBounds(L.latLngBounds([pickup, dropoff]), { padding: [80, 80] });
+    };
+
+    {% for food in available_food %}
+        if ({{ food.latitude | tojson }} !== null && {{ food.longitude | tojson }} !== null) {
+            const m = L.marker([
+                parseFloat({{ food.latitude | tojson }}), 
+                parseFloat({{ food.longitude | tojson }})
+            ])
+                .addTo(map)
+                .bindPopup(`
+                    <div style="padding:5px;">
+                        <b style="font-size:14px;">{{ food.title }}</b><br>
+                        <span style="color:#6b7280;">{{ food.quantity }}</span><br>
+                        <button onclick="window.claimFood(parseInt('{{ food.id }}'))" class="btn btn-primary" style="width:100%; margin-top:8px; padding:4px; font-size:12px;">Claim Now</button>
+                    </div>
+                `);
+            markers.food[parseInt("{{ food.id }}")] = m;
+        }
+    {% endfor %}
+
+    window.claimFood = (id) => {
+        const form = document.createElement('form');
+        form.method = 'POST'; form.action = `/ngo/claim/${id}`;
+        document.body.appendChild(form); form.submit();
+    };
+
+    // Control Functions
+    window.zoomToNGO = () => map.flyTo([ngoLat, ngoLng], 15);
+    window.zoomToCurrent = () => {
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(pos => map.flyTo([pos.coords.latitude, pos.coords.longitude], 15));
+        }
+    };
+
+    // Initial State
+    if (claims.length > 0) {
+        setTimeout(() => focusOrder(claims[0].id), 500);
+    }
+
+    const socket = io();
+    
+    // Join a room for this NGO to receive specific updates
+    socket.emit('join_ngo', { ngo_id: {{ current_user.id | tojson }} });
+
+    socket.on('volunteer_location_update', function(data) {
+        console.log("Location update received:", data);
+        
+        // Update the truck marker
+        if (truckMarker) {
+            truckMarker.setLatLng([data.lat, data.lng]);
+        }
+
+        // Calculate ETA dynamically (assuming 20km/h)
+        const activeCard = document.querySelector('.tracker-card.active');
+        if (activeCard && data.lat && data.lng) {
+            const activeId = activeCard.getAttribute('onclick').match(/\d+/)[0];
+            const claim = claims.find(c => c.id == activeId);
+            
+            if (claim) {
+                let targetLat, targetLng, targetName;
+                if (claim.status === 'assigned') {
+                    targetLat = claim.listing.latitude;
+                    targetLng = claim.listing.longitude;
+                    targetName = "Pickup";
+                } else {
+                    targetLat = ngoLat;
+                    targetLng = ngoLng;
+                    targetName = "Your Center";
+                }
+
+                if (targetLat && targetLng) {
+                    const dist = map.distance([data.lat, data.lng], [targetLat, targetLng]) / 1000; // in km
+                    const eta = Math.round((dist / 20) * 60); // minutes at 20km/h
+                    
+                    const tag = document.getElementById('map-order-tag');
+                    tag.innerHTML = `Tracking: ${claim.listing.title} <br> <span style="font-weight:700; color:#4ade80;">ETA: ${eta} mins to ${targetName}</span>`;
+                }
+            }
+        }
+    });
+
+    // Live countdown and real-time expiration handler
+    function updateExpiryCountdowns() {
+        const foodCards = document.querySelectorAll('.food-card');
+        
+        foodCards.forEach(card => {
+            const expiryTimeStr = card.getAttribute('data-expiry-time');
+            const foodId = parseInt(card.getAttribute('data-food-id'));
+            if (!expiryTimeStr) return;
+            
+            const expiryTime = new Date(expiryTimeStr);
+            const now = new Date();
+            const diffMs = expiryTime - now;
+            
+            const badge = card.querySelector('.expiry-badge');
+            const textSpan = card.querySelector('.expiry-text');
+            
+            if (diffMs <= 0) {
+                // Mark as expired in UI
+                if (textSpan) textSpan.innerText = 'Expired';
+                if (badge) {
+                    badge.style.background = '#fee2e2';
+                    badge.style.color = '#ef4444';
+                }
+                
+                // Fade out and remove
+                card.style.opacity = '0';
+                card.style.transform = 'translateY(15px)';
+                
+                setTimeout(() => {
+                    card.remove();
+                    
+                    // Remove corresponding map marker if it exists
+                    if (markers.food && markers.food[foodId]) {
+                        map.removeLayer(markers.food[foodId]);
+                        delete markers.food[foodId];
+                    }
+                    
+                    // If no cards left, show the placeholder
+                    const remainingCards = document.querySelectorAll('.food-card');
+                    if (remainingCards.length === 0) {
+                        const foodList = document.getElementById('food-list');
+                        if (foodList && !document.getElementById('no-food-placeholder')) {
+                            foodList.innerHTML = `
+                                <div id="no-food-placeholder" style="text-align: center; padding: 40px; background: #f9fafb; border-radius: 12px; border: 2px dashed #e5e7eb;">
+                                    <i class="fa-solid fa-box-open" style="font-size: 2rem; color: #d1d5db; margin-bottom: 10px; display: block;"></i>
+                                    <p style="color: var(--text-muted);">No food listings available in your area right now.</p>
+                                </div>
+                            `;
+                        }
+                    }
+                }, 500);
+            } else {
+                // Calculate display string
+                const totalSeconds = Math.floor(diffMs / 1000);
+                const hours = Math.floor(totalSeconds / 3600);
+                const minutes = Math.floor((totalSeconds % 3600) / 60);
+                const seconds = totalSeconds % 60;
+                
+                let displayStr = '';
+                if (hours > 0) {
+                    displayStr = `${hours}h ${minutes}m ${seconds}s remaining`;
+                } else if (minutes > 0) {
+                    displayStr = `${minutes}m ${seconds}s remaining`;
+                } else {
+                    displayStr = `${seconds}s remaining`;
+                }
+                
+                if (textSpan) textSpan.innerText = displayStr;
+                
+                // If less than 15 minutes remaining, make the badge red for urgency
+                if (diffMs < 15 * 60 * 1000) {
+                    if (badge) {
+                        badge.style.background = '#fef2f2';
+                        badge.style.color = '#ef4444';
+                        badge.style.border = '1px solid #fee2e2';
+                    }
+                } else {
+                    if (badge) {
+                        badge.style.background = '#fff7ed';
+                        badge.style.color = '#f59e0b';
+                        badge.style.border = 'none';
+                    }
+                }
+            }
+        });
+    }
+
+    // Run every second
+    setInterval(updateExpiryCountdowns, 1000);
+    // Run once immediately on load
+    updateExpiryCountdowns();
+
+    socket.on('task_accepted', () => {
+        console.log("Task accepted by volunteer, reloading...");
+        window.location.reload();
+    });
+    socket.on('food_claimed', () => window.location.reload());
+    socket.on('new_food_posted', () => window.location.reload());
+})();
+</script>
+{% endblock %}

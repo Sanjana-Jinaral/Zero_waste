@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Volunteer Dashboard | Zero Waste Chain</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/volunteer.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.js"></script>
+</head>
+<body>
+
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <div class="cmd-logo" style="background:#f59e0b; color:white;">
+                <i class="fa-solid fa-truck-fast"></i>
+            </div>
+            <div class="cmd-title">
+                <h2>Fleet Center</h2>
+                <span>Volunteer Network</span>
+            </div>
+        </div>
+        
+        <nav class="nav-menu">
+            <a href="{{ url_for('volunteer_dashboard') }}" class="nav-item active"><i class="fa-solid fa-route"></i> Delivery Map</a>
+            <a href="javascript:alert('Available Runs view coming soon!')" class="nav-item"><i class="fa-solid fa-list-check"></i> Available Runs</a>
+            <a href="javascript:alert('My History coming soon!')" class="nav-item"><i class="fa-solid fa-clock-rotate-left"></i> My History</a>
+        </nav>
+
+        <div class="sidebar-footer">
+            <button class="btn-post" id="btn-logout" style="background-color: #f3f4f6; color: #ef4444;"><i class="fa-solid fa-right-from-bracket"></i> Log Out</button>
+        </div>
+    </aside>
+
+    <!-- Main Wrapper -->
+    <main class="main-wrapper">
+        
+        <!-- Topbar -->
+        <header class="topbar">
+            <div style="margin-right: auto;">
+                <h2 style="font-size: 1.5rem; font-weight: 700;">Volunteer Dashboard</h2>
+            </div>
+            
+            <div class="top-actions">
+                <div style="display: flex; align-items: center; gap: 10px; margin-right: 20px; background: #ecfdf5; padding: 5px 15px; border-radius: 20px; font-weight: 700; color: #059669; font-size: 0.85rem;">
+                    <span style="width: 8px; height: 8px; background: #059669; border-radius: 50%;"></span> ONLINE
+                </div>
+                
+                <div class="profile-widget">
+                    <div class="profile-info">
+                        <span class="profile-name" id="user-profile-name">Loading...</span>
+                        <span class="profile-role">HERO VOLUNTEER</span>
+                    </div>
+                    <img src="{{ url_for('static', filename='images/chef.png') }}" alt="Profile Avatar" class="profile-avatar">
+                </div>
+            </div>
+        </header>
+
+        <!-- Dashboard Content -->
+        <div class="dashboard-content" style="flex-direction: column;">
+            
+            <!-- Top Stats -->
+            <div class="volunteer-stats-row">
+                <div class="stat-card">
+                    <div class="stat-label">Deliveries Completed</div>
+                    <div class="stat-value" id="stat-completed" style="color: #059669;">--</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Food Rescued</div>
+                    <div class="stat-value" style="color: #f59e0b;">18 <small>runs</small></div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Rating</div>
+                    <div class="stat-value" style="color: #4f46e5;">4.9 <i class="fa-solid fa-star" style="font-size:1.2rem; color:#fbbf24;"></i></div>
+                </div>
+            </div>
+
+            <!-- Main Layout: 2 Columns -->
+            <div style="display: flex; gap: 30px;">
+                
+                <!-- Left Column (Active Delivery) -->
+                <div class="main-column" style="flex: 2;">
+                    <div class="section-header">
+                        <h3>Current Active Delivery</h3>
+                    </div>
+
+                    <div id="active-delivery-container">
+                        <div class="tracking-container" style="text-align: center; padding: 40px; color: var(--text-muted);">
+                            You don't have an active delivery right now. Pick one from the right!
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Column (Available Deliveries) -->
+                <div class="side-column">
+                    <div class="section-header">
+                        <h3>Available Pickups</h3>
+                        <button onclick="loadAvailablePickups()" style="background:none; border:none; cursor:pointer; color:var(--primary-color);"><i class="fa-solid fa-rotate-right"></i></button>
+                    </div>
+
+                    <div id="available-deliveries-container">
+                        <div style="text-align: center; padding: 20px; color: var(--text-muted);">
+                            Scanning for runs...
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </main>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const token = localStorage.getItem('token');
+            const userStr = localStorage.getItem('user');
+            
+            if (!token || !userStr) {
+                window.location.href = '/login';
+                return;
+            }
+
+            const user = JSON.parse(userStr);
+            document.getElementById('user-profile-name').innerText = user.name;
+            
+            document.getElementById('btn-logout').addEventListener('click', () => {
+                localStorage.removeItem('token');
+                localStorage.removeItem('user');
+                window.location.href = '/login';
+            });
+
+            async function loadActiveDelivery() {
+                try {
+                    const res = await fetch('/api/volunteer/my_deliveries', {
+                        headers: { 'Authorization': 'Bearer ' + token }
+                    });
+                    const pickups = await res.json();
+                    
+                    const activePickups = pickups.filter(p => p.status === 'assigned' || p.status === 'in_transit');
+                    const container = document.getElementById('active-delivery-container');
+                    
+                    document.getElementById('stat-completed').innerText = pickups.filter(p => p.status === 'delivered').length;
+
+                    if (activePickups.length === 0) {
+                        container.innerHTML = `
+                            <div class="tracking-container" style="text-align: center; padding: 40px; color: var(--text-muted);">
+                                You don't have an active delivery right now. Pick one from the right!
+                            </div>
+                        `;
+                        return;
+                    }
+
+                    const current = activePickups[0];
+                    const itemDesc = current.listing ? current.listing.title : 'Surplus Food';
+                    const donorAddr = current.donor_address || 'Unknown';
+                    const ngoAddr = current.ngo_address || 'Unknown';
+
+                    container.innerHTML = `
+                        <div class="tracking-container">
+                            <div class="tracking-header">
+                                <div>
+                                    <h4 style="font-size: 1.2rem; font-weight: 700;">Route #DLV-${current.id}</h4>
+                                    <p style="font-size: 0.85rem; color: var(--text-muted);">${itemDesc}</p>
+                                </div>
+                                <span class="tracking-badge">IN PROGRESS</span>
+                            </div>
+
+                            <div class="tracking-map-box" style="height: 300px; position: relative; margin-bottom: 20px;">
+                                <div id="volunteer-map" style="width: 100%; height: 100%; border-radius: 12px; z-index: 1;"></div>
+                            </div>
+
+                            <div class="route-info">
+                                <div class="route-step">
+                                    <div class="step-icon blue"><i class="fa-solid fa-box"></i></div>
+                                    <div class="step-details">
+                                        <h5>Pickup: ${current.donor_name}</h5>
+                                        <p>${donorAddr}</p>
+                                    </div>
+                                </div>
+                                <div class="route-step">
+                                    <div class="step-icon green"><i class="fa-solid fa-location-dot"></i></div>
+                                    <div class="step-details">
+                                        <h5>Drop-off: ${current.ngo_name}</h5>
+                                        <p>${ngoAddr}</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            ${current.status === 'assigned' ? 
+                                `<button class="btn-confirm-delivery" onclick="pickupDelivery(${current.id})" style="background: #3b82f6;">
+                                    <i class="fa-solid fa-truck-pickup"></i> Confirm Pickup
+                                </button>` : 
+                                `<button class="btn-confirm-delivery" onclick="confirmDelivery(${current.id})" style="background: #059669;">
+                                    <i class="fa-solid fa-shield-check"></i> Complete Delivery
+                                </button>`
+                            }
+                        </div>
+                    `;
+
+                    // Initialize Map Routing
+                    setTimeout(() => {
+                        const map = L.map('volunteer-map');
+                        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                            attribution: '&copy; OpenStreetMap contributors'
+                        }).addTo(map);
+
+                        L.Routing.control({
+                            waypoints: [
+                                L.latLng(current.donor_lat, current.donor_lng),
+                                L.latLng(current.ngo_lat, current.ngo_lng)
+                            ],
+                            routeWhileDragging: false,
+                            addWaypoints: false,
+                            show: false // Hide text instructions for cleaner UI
+                        }).addTo(map);
+                    }, 100);
+                } catch (err) {
+                    console.error("Error loading active delivery", err);
+                }
+            }
+
+            window.loadAvailablePickups = async function() {
+                try {
+                    const res = await fetch('/api/volunteer/available_pickups', {
+                        headers: { 'Authorization': 'Bearer ' + token }
+                    });
+                    const claims = await res.json();
+                    const container = document.getElementById('available-deliveries-container');
+                    
+                    if (claims.length === 0) {
+                        container.innerHTML = '<div style="text-align: center; padding: 20px; color: var(--text-muted);">No pickups available right now.</div>';
+                        return;
+                    }
+
+                    container.innerHTML = claims.map(c => {
+                        const donorName = c.donor_name;
+                        const ngoName = c.ngo_name;
+                        return `
+                        <div class="delivery-card normal">
+                            <div class="deliv-header">
+                                <span class="deliv-tag normal">STANDARD</span>
+                                <span style="font-size: 0.75rem; font-weight: 700; color: var(--text-muted);">2.5 km away</span>
+                            </div>
+                            <h4 style="font-size: 1rem; font-weight: 700;">${c.listing ? c.listing.title : 'Food Supply'}</h4>
+                            
+                            <div class="deliv-route">
+                                <div class="deliv-route-point">
+                                    <i class="fa-solid fa-circle-dot" style="color: #3b82f6;"></i>
+                                    <span>${donorName}</span>
+                                </div>
+                                <div class="deliv-route-point">
+                                    <i class="fa-solid fa-location-dot" style="color: var(--primary-color);"></i>
+                                    <span>${ngoName}</span>
+                                </div>
+                            </div>
+
+                            <button class="btn-accept" onclick="acceptPickup(${c.id})">Accept Run</button>
+                        </div>
+                        `;
+                    }).join('');
+                } catch (err) {
+                    console.error("Error loading pickups", err);
+                }
+            }
+
+            window.acceptPickup = async function(claimId) {
+                try {
+                    const res = await fetch('/api/volunteer/accept/' + claimId, {
+                        method: 'POST',
+                        headers: { 'Authorization': 'Bearer ' + token }
+                    });
+                    
+                    if (res.ok) {
+                        alert("Pickup accepted! Proceed to the donor location.");
+                        loadAvailablePickups();
+                        loadActiveDelivery();
+                    } else {
+                        const err = await res.json();
+                        alert("Error: " + err.message);
+                    }
+                } catch (e) {
+                    alert("Connection error");
+                }
+            };
+
+            window.pickupDelivery = async function(pickupId) {
+                if(!confirm("Are you at the donor location and picking up the food?")) return;
+                try {
+                    const res = await fetch('/api/volunteer/pickup/' + pickupId, {
+                        method: 'POST',
+                        headers: { 'Authorization': 'Bearer ' + token }
+                    });
+                    if (res.ok) {
+                        alert("Pickup confirmed! Navigate to the NGO.");
+                        loadActiveDelivery();
+                    } else {
+                        const err = await res.json();
+                        alert("Error: " + err.message);
+                    }
+                } catch (e) {
+                    alert("Connection error");
+                }
+            };
+
+            window.confirmDelivery = async function(pickupId) {
+                const otp = prompt("Please enter the 6-digit OTP provided by the NGO to verify delivery:");
+                if(!otp) return;
+
+                try {
+                    const res = await fetch('/api/volunteer/complete/' + pickupId, {
+                        method: 'POST',
+                        headers: { 
+                            'Content-Type': 'application/json',
+                            'Authorization': 'Bearer ' + token 
+                        },
+                        body: JSON.stringify({ otp: otp })
+                    });
+                    
+                    if (res.ok) {
+                        alert("Delivery confirmed! OTP Verified. Thank you for your service!");
+                        loadActiveDelivery();
+                        loadAvailablePickups();
+                    } else {
+                        const err = await res.json();
+                        alert("Error: " + err.message);
+                    }
+                } catch (e) {
+                    alert("Connection error");
+                }
+            };
+
+            loadActiveDelivery();
+            loadAvailablePickups();
+        });
+    </script>
+</body>
+</html>

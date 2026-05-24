@@ -1,0 +1,231 @@
+{% block extra_head %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<link rel="stylesheet" href="{{ url_for('static', filename='css/tracker.css') }}">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+    .delivery-tracker-container { height: calc(100vh - 180px); min-height: 550px; border-radius: 1.5rem; overflow: hidden; }
+    .tracker-sidebar { width: 380px; background: #f9fafb; }
+    .task-section-title { font-size: 0.75rem; font-weight: 800; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.05em; padding: 20px 20px 10px; }
+    .tracker-card.active { border-left: 4px solid #10b981; background: white; }
+    .btn-action-full { width: 100%; padding: 12px; border-radius: 10px; border: none; font-weight: 700; cursor: pointer; transition: 0.2s; margin-top: 10px; }
+    .btn-pickup { background: #10b981; color: white; }
+    .btn-deliver { background: #3b82f6; color: white; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div style="margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: flex-end;">
+    <div>
+        <h1 style="font-size: 1.8rem;">Volunteer Navigator</h1>
+        <p style="color: var(--text-muted);">Pick up surplus, deliver hope.</p>
+    </div>
+    <div style="text-align: right;">
+        <span style="font-size: 0.8rem; color: var(--text-muted);">Session Points:</span>
+        <div style="font-weight: 800; color: #10b981; font-size: 1.2rem;">+250 XP</div>
+    </div>
+</div>
+
+<div class="delivery-tracker-container card" style="padding:0; border:none; display:flex;">
+    <aside class="tracker-sidebar" style="display:flex; flex-direction:column; border-right: 1px solid #e5e7eb;">
+        <div style="overflow-y: auto; flex: 1;">
+            
+            <!-- Active Tasks -->
+            <div class="task-section-title">My Active Missions</div>
+            <div id="active-tasks-list">
+                {% if my_tasks %}
+                    {% for task in my_tasks %}
+                        {% if task.claim and task.claim.listing %}
+                        <div class="tracker-card {% if loop.first %}active{% endif %}" onclick="focusTask({{ task.id }}, this)">
+                            <div class="card-header">
+                                <span class="order-id">MISSION #{{ task.id }}</span>
+                                <span class="status-badge {{ task.status }}">{{ task.status|upper }}</span>
+                            </div>
+                            <h4 style="margin: 10px 0 5px 0;">{{ task.claim.listing.title }}</h4>
+                            <div style="font-size: 0.8rem; color: #6b7280; display: flex; flex-direction: column; gap: 4px;">
+                                <span><i class="fa-solid fa-location-arrow" style="color: #10b981;"></i> From: {{ task.claim.listing.donor.organization_name or task.claim.listing.donor.username }}</span>
+                                <span><i class="fa-solid fa-building" style="color: #3b82f6;"></i> To: {{ task.claim.ngo.organization_name }}</span>
+                                <div style="display: flex; gap: 10px; margin-top: 5px;">
+                                    <span style="background: #f3f4f6; padding: 2px 8px; border-radius: 4px; font-weight: 600;">
+                                        <i class="fa-solid fa-road" style="font-size: 0.7rem; color: #6b7280;"></i> {{ "%.1f"|format(task.current_distance) }} km
+                                    </span>
+                                    <span style="background: #e0f2fe; color: #0369a1; padding: 2px 8px; border-radius: 4px; font-weight: 600;">
+                                        <i class="fa-solid fa-clock" style="font-size: 0.7rem;"></i> ETA: {{ task.eta }} mins
+                                    </span>
+                                </div>
+                            </div>
+                            
+                            {% if task.status == 'assigned' %}
+                                <form action="{{ url_for('volunteer.confirm_pickup', delivery_id=task.id) }}" method="POST">
+                                    <button type="submit" class="btn-action-full btn-pickup">Confirm Arrival & Pickup</button>
+                                </form>
+                            {% elif task.status == 'picked_up' %}
+                                <form action="{{ url_for('volunteer.complete_delivery', delivery_id=task.id) }}" method="POST" style="margin-top: 10px;">
+                                    <div style="display: flex; gap: 8px;">
+                                        <input type="text" name="otp" placeholder="Enter 6-digit OTP" 
+                                               style="flex: 1; padding: 12px; border-radius: 10px; border: 2px solid #e5e7eb; font-weight: 700; letter-spacing: 2px; text-align: center;" 
+                                               inputmode="numeric" autocomplete="one-time-code" required>
+                                        <button type="submit" class="btn btn-primary" style="padding: 10px 20px; border-radius: 10px; font-weight: 700;">Verify & Complete</button>
+                                    </div>
+                                </form>
+                            {% endif %}
+                        </div>
+                        {% endif %}
+                    {% endfor %}
+                {% else %}
+                    <div style="padding: 20px; text-align: center; color: #9ca3af; font-size: 0.9rem;">
+                        No active missions. Claim one below!
+                    </div>
+                {% endif %}
+            </div>
+
+            <!-- Available Tasks -->
+            <div class="task-section-title">Available Near You</div>
+            <div id="available-tasks-list">
+                {% for task in available_deliveries %}
+                    {% if task.listing %}
+                    <div class="tracker-card" style="opacity: 0.85; border-left: 4px solid transparent;" onclick="previewTask({{ task.id }}, this)">
+                        <div class="card-header">
+                            <span class="order-id">NEW REQUEST</span>
+                            <span style="font-size: 0.7rem; color: #10b981; font-weight: 700;"><i class="fa-solid fa-bolt"></i> HIGH PRIORITY</span>
+                        </div>
+                        <h4 style="margin: 5px 0;">{{ task.listing.title }}</h4>
+                        <div style="display: flex; gap: 8px; margin-bottom: 8px;">
+                            <span style="font-size: 0.7rem; color: #6b7280; background: #f3f4f6; padding: 2px 6px; border-radius: 4px;">
+                                <i class="fa-solid fa-location-dot"></i> {{ "%.1f"|format(task.distance) if task.distance else "?" }} km
+                            </span>
+                            <span style="font-size: 0.7rem; color: #059669; background: #f0fdf4; padding: 2px 6px; border-radius: 4px;">
+                                <i class="fa-solid fa-clock"></i> {{ task.eta }} min arrival
+                            </span>
+                        </div>
+                        <p style="font-size: 0.75rem; color: #6b7280; margin-bottom: 10px;">{{ task.listing.quantity }} • {{ task.listing.food_type }}</p>
+                        <form action="{{ url_for('volunteer.accept_task', claim_id=task.id) }}" method="POST">
+                            <button type="submit" class="btn btn-primary" style="width: 100%; font-size: 0.8rem; padding: 8px;">Accept Mission</button>
+                        </form>
+                    </div>
+                    {% endif %}
+                {% endfor %}
+            </div>
+        </div>
+    </aside>
+
+    <div style="flex: 1; position: relative;">
+        <div id="map" style="width: 100%; height: 100%;"></div>
+        <div class="map-overlay-info" id="nav-status-tag">Ready for your next mission</div>
+        
+        <!-- Map Actions -->
+        <div style="position: absolute; bottom: 20px; right: 20px; z-index: 1000; display: flex; flex-direction: column; gap: 10px;">
+            <button onclick="zoomToMe()" class="btn" style="background: white; width: 45px; height: 45px; border-radius: 50%; box-shadow: 0 4px 12px rgba(0,0,0,0.15); border: none;"><i class="fa-solid fa-location-crosshairs" style="color: #3b82f6;"></i></button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function() {
+    // Map Init
+    const map = L.map('map', { zoomControl: false }).setView([20.5937, 78.9629], 5);
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+        attribution: '&copy; CartoDB'
+    }).addTo(map);
+
+    let routeLine = null;
+    let markers = {};
+
+    // Data from Jinja
+    const activeTasks = [
+        {% for task in my_tasks %}
+        {% if task.claim and task.claim.listing %}
+        {
+            id: {{ task.id | tojson }},
+            status: {{ task.status | tojson }},
+            pickup: [{{ task.claim.listing.latitude | default('null') | tojson }}, {{ task.claim.listing.longitude | default('null') | tojson }}],
+            dropoff: [{{ task.claim.ngo.latitude | default('null') | tojson }}, {{ task.claim.ngo.longitude | default('null') | tojson }}],
+            title: {{ task.claim.listing.title | tojson }}
+        },
+        {% endif %}
+        {% endfor %}
+    ];
+
+    const availableTasks = [
+        {% for task in available_deliveries %}
+        {% if task.listing %}
+        {
+            id: {{ task.id | tojson }},
+            pickup: [{{ task.listing.latitude | default('null') | tojson }}, {{ task.listing.longitude | default('null') | tojson }}],
+            dropoff: [{{ task.ngo.latitude | default('null') | tojson }}, {{ task.ngo.longitude | default('null') | tojson }}],
+            title: {{ task.listing.title | tojson }}
+        },
+        {% endif %}
+        {% endfor %}
+    ];
+
+    window.focusTask = function(id, element) {
+        if (element) {
+            document.querySelectorAll('.tracker-card').forEach(el => el.classList.remove('active'));
+            element.classList.add('active');
+        }
+        const task = activeTasks.find(t => t.id === id);
+        renderRoute(task);
+    };
+
+    window.previewTask = function(id, element) {
+        if (element) {
+            document.querySelectorAll('.tracker-card').forEach(el => el.classList.remove('active'));
+            element.classList.add('active');
+        }
+        const task = availableTasks.find(t => t.id === id);
+        renderRoute(task, true);
+    };
+
+    function renderRoute(task, isPreview = false) {
+        if (task.pickup[0] === null || task.dropoff[0] === null) return;
+
+        if (routeLine) map.removeLayer(routeLine);
+        Object.values(markers).forEach(m => map.removeLayer(m));
+
+        const color = isPreview ? '#9ca3af' : '#10b981';
+        
+        routeLine = L.polyline([task.pickup, task.dropoff], {
+            color: color, weight: 5, opacity: 0.6, dashArray: '10, 10'
+        }).addTo(map);
+
+        markers.pickup = L.marker(task.pickup).addTo(map).bindPopup("Pickup: " + task.title);
+
+        markers.dropoff = L.marker(task.dropoff).addTo(map).bindPopup("Dropoff: NGO Center");
+
+        document.getElementById('nav-status-tag').innerText = isPreview ? `Previewing Mission: ${task.title}` : `Active Navigation: ${task.title}`;
+        
+        map.fitBounds(L.latLngBounds([task.pickup, task.dropoff]), { padding: [50, 50] });
+    }
+
+    window.zoomToMe = () => {
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(pos => map.flyTo([pos.coords.latitude, pos.coords.longitude], 14));
+        }
+    };
+
+    // Real-time GPS Broadcast
+    const socket = io();
+    if (navigator.geolocation && activeTasks.length > 0) {
+        navigator.geolocation.watchPosition(pos => {
+            activeTasks.forEach(task => {
+                if (task.status !== 'delivered') {
+                    socket.emit('volunteer_location', {
+                        volunteer_id: {{ current_user.id | tojson }},
+                        lat: pos.coords.latitude,
+                        lng: pos.coords.longitude,
+                        delivery_id: task.id,
+                        ngo_id: {{ (my_tasks[0].claim.ngo_id if my_tasks else 0) | tojson }}
+                    });
+                }
+            });
+        }, null, { enableHighAccuracy: true });
+    }
+
+    if (activeTasks.length > 0) focusTask(activeTasks[0].id);
+    else if (availableTasks.length > 0) previewTask(availableTasks[0].id);
+})();
+</script>
+{% endblock %}
+
