@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Success</title>
+
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #8BC34A, #4CAF50);
+
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .success-box {
+            background: rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(10px);
+            padding: 40px 30px;
+            border-radius: 15px;
+            width: 320px;
+            text-align: center;
+            box-shadow: 0px 10px 25px rgba(0,0,0,0.2);
+            position: relative;
+        }
+
+        .icon {
+            width: 70px;
+            height: 70px;
+            background: #3f9c91;
+            border-radius: 50%;
+            position: absolute;
+            top: -35px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            font-size: 30px;
+        }
+
+        h1 {
+            margin-top: 40px;
+            margin-bottom: 25px;
+            color: #333;
+            font-size: 22px;
+        }
+
+        .btn {
+            display: block;
+            width: 90%;
+            margin: 10px auto;
+            padding: 10px;
+            background: #3f9c91;
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: bold;
+        }
+
+        .btn:hover {
+            background: #357f76;
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="success-box">
+
+    <div class="icon">✔</div>
+
+    <h1>LOGIN SUCCESS</h1>
+
+    <a href="restaurant_page/" class="btn">Add New Restaurant</a>
+    <a href="show_restaurant_page/" class="btn">Show All Restaurants</a>
+
+</div>
+
+</body>
+</html>

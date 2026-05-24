@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Order Confirmation</title>
+
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #8BC34A, #4CAF50);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .main-box {
+            background: rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(10px);
+            padding: 30px;
+            border-radius: 15px;
+            width: 90%;
+            max-width: 800px;
+            box-shadow: 0px 10px 25px rgba(0,0,0,0.2);
+            text-align: center;
+        }
+
+        h1 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+
+        p {
+            font-size: 16px;
+            margin: 10px 0;
+        }
+
+        b {
+            color: #000;
+        }
+
+        h3 {
+            margin-top: 20px;
+            color: #222;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+            background: rgba(255,255,255,0.6);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        thead, tr:first-child {
+            background: #3f9c91;
+            color: white;
+        }
+
+        th, td {
+            padding: 12px;
+            text-align: center;
+        }
+
+        tbody tr:nth-child(even) {
+            background: rgba(255,255,255,0.4);
+        }
+
+        img {
+            border-radius: 8px;
+        }
+
+        .total {
+            margin-top: 15px;
+            font-weight: bold;
+        }
+
+        .btn {
+            display: inline-block;
+            margin-top: 20px;
+            padding: 10px 16px;
+            background: #3f9c91;
+            color: white;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: bold;
+        }
+
+        .btn:hover {
+            background: #357f76;
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="main-box">
+
+    <h1>Thank You {{ username }}! 🎉</h1>
+
+    <p>
+        Your order will be delivered shortly at : <b>{{ address }}</b>
+    </p>
+
+    <h3>Order Summary</h3>
+
+    <table>
+        <tr>
+            <th>Image</th>
+            <th>Item</th>
+            <th>Price</th>
+        </tr>
+
+        {% for item in cart_items %}
+        <tr>
+            <td>
+                <img src="{{ item.picture }}" width="70">
+            </td>
+            <td>{{ item.name }}</td>
+            <td>₹ {{ item.price }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+
+    <h3 class="total">Total Paid: ₹ {{ total_price }}</h3>
+
+    <a href="/" class="btn">Go to Home</a>
+
+</div>
+
+</body>
+</html>

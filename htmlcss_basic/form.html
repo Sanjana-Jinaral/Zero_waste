@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Student Registration Form</title>
+    <style>
+        body {
+            background: #414141;
+            color: #fff;
+        }
+    </style>
+</head>
+<body>
+
+<h2 align="center">Student Registration Form</h2>
+
+<form action="#" method="get" accept-charset="utf-16--" autocomplete="off" enctype="">
+
+
+<!-- https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/form -->
+<!-- Name -->
+<label for="fname">Full Name:</label>
+<input type="text" name="name" placeholder="Enter your name" id="fname" required> <!--required: form will not submit until this field is filled-->
+<br><br>
+
+<!-- Email -->
+<label>Email:</label>
+<input type="email" name="email" placeholder="Enter your email" required>
+<br><br>
+
+<!-- Password -->
+<label>Password:</label>
+<input type="password" name="password" placeholder="Enter password" required>
+<br><br>
+
+<!-- Phone -->
+<label>Phone Number:</label>
+<input type="tel" name="phone" placeholder="Enter phone number"> <!--tel: for telephone number  -->
+<br><br>
+
+<!-- Gender -->
+<label>Gender:</label><br>
+<input type="radio" name="gender" value="male"> Male
+<input type="radio" name="gender" value="female"> Female
+<input type="radio" name="gender" value="other"> Other
+<br><br>
+
+<!-- Hobbies -->
+<label>Hobbies:</label><br>
+<input type="checkbox" name="hobby1"> Music
+<input type="checkbox" name="hobby2"> Sports
+<input type="checkbox" name="hobby3"> Reading
+<br><br>
+
+<!-- Date of Birth -->
+<label>Date of Birth:</label><br>
+<input type="date" name="dob">
+<br><br>
+
+<!-- Country Dropdown -->
+<label>Country:</label><br>
+<select name="country">
+    <option>India</option>
+    <option>USA</option>
+    <option>UK</option>
+    <option>Canada</option>
+</select>
+<br><br>
+
+<!-- Address -->
+<label>Address:</label><br>
+<textarea rows="5" cols="40" placeholder="Enter your address"></textarea>  <!--placeholder: temporary content-->
+<br><br>
+
+<!-- File Upload -->
+<label>Upload Resume:</label><br>
+<input type="file" name="resume">
+<br><br>
+
+<!--Range-->
+<div>
+<label>Age:</label>
+<input type="range" name="age" min="0" max="100">
+</div>
+
+<!-- Buttons -->
+<input type="submit" value="Register">
+<input type="reset" value="Clear Form">
+<button type="submit">Pay</button>
+
+</form>
+
+</body>
+</html>

@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Customer Home</title>
+
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #8BC34A, #4CAF50);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .main-box {
+            background: rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(10px);
+            padding: 30px;
+            border-radius: 15px;
+            width: 85%;
+            max-width: 900px;
+            box-shadow: 0px 10px 25px rgba(0,0,0,0.2);
+        }
+
+        h3 {
+            margin: 0;
+            color: #333;
+        }
+
+        h1 {
+            text-align: center;
+            margin: 20px 0;
+            color: #222;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: rgba(255,255,255,0.6);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        thead {
+            background: #3f9c91;
+            color: white;
+        }
+
+        th, td {
+            padding: 12px;
+            text-align: center;
+        }
+
+        tbody tr:nth-child(even) {
+            background: rgba(255,255,255,0.4);
+        }
+
+        img {
+            border-radius: 8px;
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 8px 12px;
+            background: #3f9c91;
+            color: white;
+            border-radius: 6px;
+            text-decoration: none;
+            font-size: 14px;
+        }
+
+        .btn:hover {
+            background: #357f76;
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="main-box">
+
+    <h3>Welcome : {{username}}</h3>
+    <h1>My Favourite Restaurants</h1>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Picture</th>
+                <th>Name</th>
+                <th>Cuisine</th>
+                <th>Rating</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+
+        <tbody>
+            {% for restaurant in restaurants %}
+            <tr>
+                <td>
+                    <img src="{{restaurant.picture}}" alt="picture of {{restaurant.name}}" width="80">
+                </td>
+                <td>{{ restaurant.name }}</td>
+                <td>{{ restaurant.cuisine }}</td>
+                <td>{{ restaurant.rating }}/5</td>
+                <td>
+                    <a href="{% url 'customer_menu' restaurant.id username %}" class="btn">
+                        View Menu
+                    </a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+</div>
+
+</body>
+</html>

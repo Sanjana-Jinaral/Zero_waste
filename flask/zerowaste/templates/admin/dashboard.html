@@ -1,0 +1,186 @@
+{% extends 'base.html' %}
+{% block title %}Admin Panel — ZeroWasteChain{% endblock %}
+{% block content %}
+<div class="page">
+    <div class="page-header">
+        <div>
+            <h1>🛡️ Admin Panel</h1>
+            <p>Platform overview, user management, and analytics</p>
+        </div>
+        <a href="/admin/export" class="btn btn-dark">⬇ Export CSV</a>
+    </div>
+
+    <!-- Platform Stats -->
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-icon">👥</div>
+            <div><div class="stat-val">{{ stats.users }}</div><div class="stat-lbl">Total Users</div></div>
+        </div>
+        <div class="stat-card orange">
+            <div class="stat-icon">🍽️</div>
+            <div><div class="stat-val">{{ stats.donors }}</div><div class="stat-lbl">Donors</div></div>
+        </div>
+        <div class="stat-card blue">
+            <div class="stat-icon">🏢</div>
+            <div><div class="stat-val">{{ stats.ngos }}</div><div class="stat-lbl">NGOs</div></div>
+        </div>
+        <div class="stat-card purple">
+            <div class="stat-icon">🚴</div>
+            <div><div class="stat-val">{{ stats.vols }}</div><div class="stat-lbl">Volunteers</div></div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon">📋</div>
+            <div><div class="stat-val">{{ stats.listings }}</div><div class="stat-lbl">Listings</div></div>
+        </div>
+        <div class="stat-card blue">
+            <div class="stat-icon">✅</div>
+            <div><div class="stat-val">{{ stats.delivered }}</div><div class="stat-lbl">Delivered</div></div>
+        </div>
+        <div class="stat-card orange">
+            <div class="stat-icon">⚖️</div>
+            <div><div class="stat-val">{{ stats.kg | round(1) }} kg</div><div class="stat-lbl">Food Saved</div></div>
+        </div>
+        <div class="stat-card purple">
+            <div class="stat-icon">🌿</div>
+            <div><div class="stat-val">{{ stats.co2 | round(1) }} kg</div><div class="stat-lbl">CO₂ Saved</div></div>
+        </div>
+    </div>
+
+    <!-- Impact Chart -->
+    {% if monthly %}
+    <div class="card" style="margin-bottom:24px;">
+        <div class="card-header"><h2>📊 Monthly Impact (Last 6 Months)</h2></div>
+        <div class="card-body">
+            <canvas id="impact-chart" width="800" height="200"></canvas>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Reports -->
+    {% if reports %}
+    <div class="card" style="margin-bottom:24px;">
+        <div class="card-header"><h2>🚨 Open Reports ({{ reports | length }})</h2></div>
+        <div class="card-body" style="padding:0;">
+        <div class="table-wrap">
+        <table>
+            <thead><tr><th>Reporter</th><th>Target</th><th>Reason</th><th>Date</th></tr></thead>
+            <tbody>
+            {% for r in reports %}
+            <tr>
+                <td>{{ r.reporter_name }}</td>
+                <td>{{ r.target_name }}</td>
+                <td>{{ r.reason }}</td>
+                <td>{{ r.created_at[:10] }}</td>
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- User Management -->
+    <div class="card" style="margin-bottom:24px;">
+        <div class="card-header">
+            <h2>👥 User Management</h2>
+            <input id="live-search" type="text" placeholder="🔍 Search users..." style="padding:6px 12px;border:1.5px solid var(--border);border-radius:6px;font-size:0.85rem;outline:none;">
+        </div>
+        <div class="card-body" style="padding:0;">
+        <div class="table-wrap">
+        <table>
+            <thead>
+                <tr><th>#</th><th>Name</th><th>Email</th><th>Role</th><th>City</th><th>Org</th><th>Verified</th><th>Active</th><th>Joined</th><th>Actions</th></tr>
+            </thead>
+            <tbody>
+            {% for u in users %}
+            <tr data-searchable>
+                <td>{{ loop.index }}</td>
+                <td><strong>{{ u.name }}</strong></td>
+                <td>{{ u.email }}</td>
+                <td>
+                    {% if u.role == 'donor' %}<span class="badge badge-orange">Donor</span>
+                    {% elif u.role == 'ngo' %}<span class="badge badge-blue">NGO</span>
+                    {% elif u.role == 'volunteer' %}<span class="badge badge-green">Volunteer</span>
+                    {% endif %}
+                </td>
+                <td>{{ u.city or '—' }}</td>
+                <td>{{ u.org_name or '—' }}</td>
+                <td>
+                    {% if u.is_verified %}<span class="badge badge-green">✅ Yes</span>
+                    {% else %}<span class="badge badge-red">❌ No</span>{% endif %}
+                </td>
+                <td>
+                    {% if u.is_active %}<span class="badge badge-green">Active</span>
+                    {% else %}<span class="badge badge-gray">Blocked</span>{% endif %}
+                </td>
+                <td>{{ u.created_at[:10] }}</td>
+                <td>
+                    {% if not u.is_verified %}
+                    <a href="/admin/verify/{{ u.id }}/1" class="btn btn-green btn-sm">Verify</a>
+                    {% else %}
+                    <a href="/admin/verify/{{ u.id }}/0" class="btn btn-ghost btn-sm">Unverify</a>
+                    {% endif %}
+                    <a href="/admin/toggle/{{ u.id }}" class="btn btn-sm {{ 'btn-red' if u.is_active else 'btn-orange' }}"
+                       onclick="return confirm('{{ 'Block' if u.is_active else 'Unblock' }} this user?')">
+                        {{ 'Block' if u.is_active else 'Unblock' }}
+                    </a>
+                </td>
+            </tr>
+            {% else %}
+            <tr><td colspan="10" class="empty-row">No users found.</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        </div>
+        </div>
+    </div>
+
+    <!-- All Listings -->
+    <div class="card">
+        <div class="card-header"><h2>📋 All Food Listings</h2></div>
+        <div class="card-body" style="padding:0;">
+        <div class="table-wrap">
+        <table>
+            <thead>
+                <tr><th>#</th><th>Title</th><th>Donor</th><th>Category</th><th>City</th><th>Qty</th><th>Status</th><th>Posted</th></tr>
+            </thead>
+            <tbody>
+            {% for f in listings %}
+            <tr>
+                <td>{{ loop.index }}</td>
+                <td>{{ f.title }}</td>
+                <td>{{ f.donor_name }}</td>
+                <td>{{ f.category }}</td>
+                <td>{{ f.city }}</td>
+                <td>{{ f.quantity }} {{ f.unit }}</td>
+                <td>
+                    {% if f.status == 'available' %}<span class="badge badge-green">Available</span>
+                    {% elif f.status == 'claimed' %}<span class="badge badge-blue">Claimed</span>
+                    {% elif f.status == 'delivered' %}<span class="badge badge-yellow">Delivered</span>
+                    {% elif f.status == 'cancelled' %}<span class="badge badge-gray">Cancelled</span>
+                    {% else %}<span class="badge badge-red">{{ f.status }}</span>{% endif %}
+                </td>
+                <td>{{ f.created_at[:10] }}</td>
+            </tr>
+            {% else %}
+            <tr><td colspan="8" class="empty-row">No listings yet.</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const monthly = {{ monthly | tojson }};
+if (monthly.length) {
+    const labels = monthly.map(m => m.month);
+    const values = monthly.map(m => Math.round(m.kg || 0));
+    renderBarChart('impact-chart', labels, values, '#16a34a');
+}
+</script>
+{% endblock %}

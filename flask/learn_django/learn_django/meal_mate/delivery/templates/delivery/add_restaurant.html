@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Add Restaurant</title>
+
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #8BC34A, #4CAF50);
+
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+        }
+
+        .form-box {
+            background: rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(10px);
+            padding: 40px 30px;
+            border-radius: 15px;
+            width: 320px;
+            margin-top: 40px;
+            text-align: center;
+            box-shadow: 0px 10px 25px rgba(0,0,0,0.2);
+            position: relative;
+        }
+
+        .icon {
+            width: 70px;
+            height: 70px;
+            background: #3f9c91;
+            border-radius: 50%;
+            position: absolute;
+            top: -35px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            font-size: 30px;
+        }
+
+        h2 {
+            margin-top: 40px;
+            margin-bottom: 20px;
+            color: #333;
+        }
+
+        /* ✅ CENTER LABELS */
+        label {
+            display: block;
+            text-align: center;
+            font-size: 12px;
+            margin-bottom: 5px;
+            color: #333;
+        }
+
+        /* ✅ CENTER INPUT BOX */
+        .input-box {
+            margin-bottom: 15px;
+            display: flex;
+            justify-content: center;
+        }
+
+        /* ✅ INPUT FIELDS */
+        .input-box input {
+            width: 90%;
+            padding: 10px;
+            border-radius: 8px;
+            border: none;
+            background: rgba(255,255,255,0.6);
+            outline: none;
+            box-sizing: border-box;
+        }
+
+        button {
+            width: 90%;
+            padding: 10px;
+            background: #3f9c91;
+            border: none;
+            border-radius: 8px;
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+
+        button:hover {
+            background: #357f76;
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="form-box">
+
+    <div class="icon">🍽️</div>
+
+    <h2>Add Restaurant</h2>
+
+    <form method="POST" action="{% url 'add_restaurant' %}">
+        {% csrf_token %}
+
+        <label>RESTAURANT NAME</label>
+        <div class="input-box">
+            <input type="text" name="name" placeholder="Enter restaurant name" required>
+        </div>
+
+        <label>PICTURE URL</label>
+        <div class="input-box">
+            <input type="url" name="picture" placeholder="Enter image URL" required>
+        </div>
+
+        <label>CUISINE</label>
+        <div class="input-box">
+            <input type="text" name="cuisine" placeholder="Enter cuisine" required>
+        </div>
+
+        <label>RATING</label>
+        <div class="input-box">
+            <input type="number" name="rating" step="0.1" min="0" max="5" placeholder="Enter rating (0-5)" required>
+        </div>
+
+        <button type="submit">ADD RESTAURANT</button>
+    </form>
+
+</div>
+
+</body>
+</html>

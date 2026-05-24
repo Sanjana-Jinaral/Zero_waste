@@ -1,0 +1,68 @@
+{% extends 'base.html' %}
+{% block title %}Volunteer Dashboard — ZeroWasteChain{% endblock %}
+{% block content %}
+<div class="page">
+    <div class="page-header">
+        <div>
+            <h1>🚴 Volunteer Dashboard</h1>
+            <p>Your pickup assignments and delivery history</p>
+        </div>
+    </div>
+
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-icon">📋</div>
+            <div><div class="stat-val">{{ stats.total }}</div><div class="stat-lbl">Total Assigned</div></div>
+        </div>
+        <div class="stat-card orange">
+            <div class="stat-icon">🚴</div>
+            <div><div class="stat-val">{{ stats.pending }}</div><div class="stat-lbl">Pending Pickup</div></div>
+        </div>
+        <div class="stat-card blue">
+            <div class="stat-icon">✅</div>
+            <div><div class="stat-val">{{ stats.delivered }}</div><div class="stat-lbl">Delivered</div></div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header"><h2>📦 My Assignments</h2></div>
+        <div class="card-body" style="padding:0;">
+        <div class="table-wrap">
+        <table>
+            <thead>
+                <tr><th>#</th><th>Food</th><th>Pickup Address</th><th>Donor</th><th>NGO</th><th>Qty</th><th>Expires</th><th>Status</th><th>Action</th></tr>
+            </thead>
+            <tbody>
+            {% for a in assignments %}
+            <tr>
+                <td>{{ loop.index }}</td>
+                <td><strong>{{ a.title }}</strong></td>
+                <td>📍 {{ a.pickup_address }}<br><small>{{ a.city }}</small></td>
+                <td>{{ a.donor_name }}<br><small>{{ a.donor_phone or '' }}</small></td>
+                <td>{{ a.ngo_name }}<br><small>{{ a.ngo_phone or '' }}</small></td>
+                <td>{{ a.quantity }} {{ a.unit }}</td>
+                <td><span data-expiry="{{ a.expiry_time }}"></span></td>
+                <td>
+                    {% if a.status == 'approved' %}<span class="badge badge-yellow">Ready for Pickup</span>
+                    {% elif a.status == 'picked' %}<span class="badge badge-blue">Picked Up</span>
+                    {% elif a.status == 'delivered' %}<span class="badge badge-green">Delivered ✅</span>
+                    {% else %}<span class="badge badge-gray">{{ a.status }}</span>{% endif %}
+                </td>
+                <td>
+                    {% if a.status == 'approved' %}
+                    <a href="/volunteer/pickup/{{ a.id }}" class="btn btn-orange btn-sm" onclick="return confirm('Mark as picked up?')">📦 Mark Picked</a>
+                    {% elif a.status == 'picked' %}
+                    <span style="color:#64748b;font-size:0.82rem;">Waiting NGO confirmation</span>
+                    {% else %}—{% endif %}
+                </td>
+            </tr>
+            {% else %}
+            <tr><td colspan="9" class="empty-row">No assignments yet. Wait for an NGO to assign you.</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

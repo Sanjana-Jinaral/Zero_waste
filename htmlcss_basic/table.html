@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Table</title>
+    <style>
+table {
+    width: 100%;
+    border-collapse: collapse;
+    text-align: center;
+    color: black;
+}
+
+td, th {
+    border: 1px solid rgb(144, 141, 141);
+    padding: 10px;
+}
+
+tr:nth-child(even) {
+    background-color: #787575;
+}
+    </style>
+</head>
+<body>
+    <caption>Country details</caption>
+    <table>
+        <colgroup>
+            <col span="2"/>
+        </colgroup>
+        <tr>
+            <th>Country</th>
+            <th>country code</th>
+            <th>email</th>
+        </tr>
+        <tr>
+            <td>INDIA</td>
+            <td>IN</td>
+            <td>india@google.com</td>
+        </tr>
+        <tr>     <!-- ALT+Shift+down arraw -->
+            <td colspan="2">united kingom</td>
+            <td>UK</td>
+            <td>uk@google.com</td>
+        </tr>
+    </table>
+<br>
+<br>
+<br>
+    <caption>Country details</caption>
+    <table>
+        <thead>
+            <tr>
+                <th rowspan="2">Country</th>
+                <th colspan="2">Details</th>
+            </tr>
+            <tr>
+                <th>country code</th>
+                <th>email</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>INDIA</td>
+                <td>IN</td>
+                <td>india@google.com</td>
+            </tr>
+        </tbody>
+        <tfoot>
+            <tr>
+                <td>united kingom</td>
+                <td>UK</td>
+                <td>uk@google.com</td>
+            </tr>
+        </tfoot>
+
+    </table>
+</body>
+</html>

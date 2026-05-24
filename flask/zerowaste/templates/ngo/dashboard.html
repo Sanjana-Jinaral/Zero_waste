@@ -1,0 +1,207 @@
+{% extends 'base.html' %}
+{% block title %}NGO Dashboard — ZeroWasteChain{% endblock %}
+{% block content %}
+<div class="page">
+    <div class="page-header">
+        <div>
+            <h1>🏢 NGO Dashboard</h1>
+            <p>Find and claim surplus food for your community</p>
+        </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-icon">📋</div>
+            <div><div class="stat-val">{{ stats.claimed }}</div><div class="stat-lbl">Total Claims</div></div>
+        </div>
+        <div class="stat-card blue">
+            <div class="stat-icon">✅</div>
+            <div><div class="stat-val">{{ stats.delivered }}</div><div class="stat-lbl">Delivered</div></div>
+        </div>
+        <div class="stat-card orange">
+            <div class="stat-icon">⚖️</div>
+            <div><div class="stat-val">{{ stats.kg | round(1) }} kg</div><div class="stat-lbl">Food Saved</div></div>
+        </div>
+        <div class="stat-card purple">
+            <div class="stat-icon">🍽️</div>
+            <div><div class="stat-val">{{ stats.meals }}</div><div class="stat-lbl">Meals Provided</div></div>
+        </div>
+    </div>
+
+    <!-- Search Available Food -->
+    <div class="card" style="margin-bottom:24px;">
+        <div class="card-header"><h2>🔍 Available Food Near You</h2></div>
+        <div class="card-body">
+            <form method="GET" action="/ngo" class="search-bar" style="margin-bottom:20px;">
+                <input type="text" name="q" placeholder="Search food title..." value="{{ q }}">
+                <select name="city">
+                    <option value="">All Cities</option>
+                    {% for c in cities %}
+                    <option value="{{ c.city }}" {{ 'selected' if c.city == city_filter }}>{{ c.city }}</option>
+                    {% endfor %}
+                </select>
+                <select name="category">
+                    <option value="">All Categories</option>
+                    {% for c in categories %}
+                    <option value="{{ c.category }}" {{ 'selected' if c.category == cat_filter }}>{{ c.category }}</option>
+                    {% endfor %}
+                </select>
+                <button type="submit" class="btn btn-green btn-sm">Filter</button>
+                {% if q or city_filter or cat_filter %}
+                <a href="/ngo" class="btn btn-ghost btn-sm">✕ Clear</a>
+                {% endif %}
+            </form>
+
+            <div class="food-grid">
+            {% for f in food_list %}
+            <div class="food-card">
+                <div class="food-card-img">
+                    {% if f.category == 'Cooked Food' %}🍛
+                    {% elif f.category == 'Bakery' %}🥐
+                    {% elif f.category == 'Fruits & Vegetables' %}🥦
+                    {% elif f.category == 'Dairy' %}🥛
+                    {% else %}🍱{% endif %}
+                </div>
+                <div class="food-card-body">
+                    <div class="food-card-title">{{ f.title }}</div>
+                    <div class="food-card-meta">
+                        <span>📍 {{ f.city }}</span>
+                        <span>⚖️ {{ f.quantity }} {{ f.unit }}</span>
+                        <span>🏪 {{ f.org_name or f.donor_name }}</span>
+                        <span>📞 {{ f.donor_phone or '—' }}</span>
+                    </div>
+                    <span class="badge badge-green">{{ f.category }}</span>
+                    &nbsp;
+                    <span data-expiry="{{ f.expiry_time }}"></span>
+                    {% if f.description %}
+                    <p style="font-size:0.8rem;color:#64748b;margin-top:8px;">{{ f.description }}</p>
+                    {% endif %}
+                </div>
+                <div class="food-card-footer">
+                    <button onclick="openClaimModal({{ f.id }}, '{{ f.title }}')" class="btn btn-green btn-sm">🙋 Claim</button>
+                </div>
+            </div>
+            {% else %}
+            <div style="grid-column:1/-1;text-align:center;color:#64748b;padding:40px;">
+                No available food found. Try changing filters.
+            </div>
+            {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- My Claims -->
+    <div class="card">
+        <div class="card-header"><h2>📦 My Claims</h2></div>
+        <div class="card-body" style="padding:0;">
+        <div class="table-wrap">
+        <table>
+            <thead>
+                <tr><th>#</th><th>Food</th><th>City</th><th>Donor</th><th>Volunteer</th><th>Status</th><th>Actions</th></tr>
+            </thead>
+            <tbody>
+            {% for c in my_claims %}
+            <tr>
+                <td>{{ loop.index }}</td>
+                <td><strong>{{ c.title }}</strong><br><small style="color:#64748b;">{{ c.pickup_address }}</small></td>
+                <td>{{ c.city }}</td>
+                <td>{{ c.donor_name }}</td>
+                <td>{{ c.vol_name or '<span style="color:#94a3b8;">Not assigned</span>' | safe }}</td>
+                <td>
+                    {% if c.status == 'pending' %}<span class="badge badge-yellow">Pending Approval</span>
+                    {% elif c.status == 'approved' %}<span class="badge badge-green">Approved</span>
+                    {% elif c.status == 'rejected' %}<span class="badge badge-red">Rejected</span>
+                    {% elif c.status == 'picked' %}<span class="badge badge-blue">Picked Up</span>
+                    {% elif c.status == 'delivered' %}<span class="badge badge-yellow">Delivered ✅</span>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if c.status == 'approved' and not c.volunteer_id %}
+                    <button onclick="openAssignModal({{ c.id }})" class="btn btn-blue btn-sm">Assign Volunteer</button>
+                    {% endif %}
+                    {% if c.status == 'picked' %}
+                    <a href="/ngo/confirm/{{ c.id }}" class="btn btn-green btn-sm" onclick="return confirm('Confirm delivery?')">✅ Confirm Delivery</a>
+                    {% endif %}
+                </td>
+            </tr>
+            {% else %}
+            <tr><td colspan="7" class="empty-row">No claims yet. Browse available food above.</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        </div>
+        </div>
+    </div>
+</div>
+
+<!-- Claim Modal -->
+<div id="claim-modal" class="modal hidden">
+    <div class="modal-box">
+        <div class="modal-header">
+            <h2>🙋 Claim Food</h2>
+            <button class="modal-close" onclick="closeModal('claim-modal')">✕</button>
+        </div>
+        <div class="modal-body">
+            <p style="margin-bottom:16px;color:#334155;">You are claiming: <strong id="claim-food-title"></strong></p>
+            <form method="POST" id="claim-form">
+                <input type="hidden" id="claim-food-id" name="food_id">
+                <div class="form-group">
+                    <label>Note to Donor (optional)</label>
+                    <textarea name="note" class="form-control" rows="3" placeholder="Any message for the donor..."></textarea>
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-green">Submit Claim</button>
+                    <button type="button" class="btn btn-ghost" onclick="closeModal('claim-modal')">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Assign Volunteer Modal -->
+<div id="assign-modal" class="modal hidden">
+    <div class="modal-box">
+        <div class="modal-header">
+            <h2>🚴 Assign Volunteer</h2>
+            <button class="modal-close" onclick="closeModal('assign-modal')">✕</button>
+        </div>
+        <div class="modal-body">
+            <form method="POST" id="assign-form">
+                <input type="hidden" id="assign-claim-id">
+                <div class="form-group">
+                    <label>Select Volunteer *</label>
+                    <select name="volunteer_id" class="form-control" required>
+                        <option value="">Choose a volunteer</option>
+                        {% for v in volunteers %}
+                        <option value="{{ v.id }}">{{ v.name }} — {{ v.phone or 'No phone' }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-blue">Assign</button>
+                    <button type="button" class="btn btn-ghost" onclick="closeModal('assign-modal')">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.getElementById('claim-form').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const foodId = document.getElementById('claim-food-id').value;
+    this.action = `/ngo/claim/${foodId}`;
+    this.submit();
+});
+document.getElementById('assign-form').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const claimId = document.getElementById('assign-claim-id').value;
+    this.action = `/ngo/assign/${claimId}`;
+    this.submit();
+});
+</script>
+{% endblock %}

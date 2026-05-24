@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Update Menu Item</title>
+
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #8BC34A, #4CAF50);
+
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+        }
+
+        .form-box {
+            background: rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(10px);
+            padding: 40px 30px;
+            border-radius: 15px;
+            width: 320px;
+            margin-top: 40px;
+            text-align: center;
+            box-shadow: 0px 10px 25px rgba(0,0,0,0.2);
+            position: relative;
+        }
+
+        .icon {
+            width: 70px;
+            height: 70px;
+            background: #3f9c91;
+            border-radius: 50%;
+            position: absolute;
+            top: -35px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            font-size: 28px;
+        }
+
+        h2 {
+            margin-top: 40px;
+            margin-bottom: 20px;
+            color: #333;
+        }
+
+        /* ✅ CENTER LABELS */
+        label {
+            display: block;
+            text-align: center;
+            font-size: 12px;
+            margin-bottom: 5px;
+            color: #333;
+        }
+
+        /* ✅ CENTER INPUTS */
+        .input-box {
+            margin-bottom: 15px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .input-box input,
+        .input-box textarea {
+            width: 90%;
+            padding: 10px;
+            border-radius: 8px;
+            border: none;
+            background: rgba(255,255,255,0.6);
+            outline: none;
+            resize: none;
+            box-sizing: border-box;
+        }
+
+        textarea {
+            height: 70px;
+        }
+
+        .checkbox-box {
+            margin-bottom: 15px;
+            text-align: center;
+        }
+
+        button {
+            width: 90%;
+            padding: 10px;
+            background: #3f9c91;
+            border: none;
+            border-radius: 8px;
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: #357f76;
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="form-box">
+
+    <div class="icon">✏️</div>
+
+    <h2>Update Menu Item</h2>
+
+    <form method="POST" action="{% url 'update_menuItem' menuItem.id %}">
+        {% csrf_token %}
+
+        <label>ITEM NAME</label>
+        <div class="input-box">
+            <input type="text" name="name" value="{{menuItem.name}}" required>
+        </div>
+
+        <label>DESCRIPTION</label>
+        <div class="input-box">
+            <textarea name="description" required>{{menuItem.description}}</textarea>
+        </div>
+
+        <label>PRICE</label>
+        <div class="input-box">
+            <input type="number" name="price" step="0.01" value="{{menuItem.price}}" required>
+        </div>
+
+        <div class="checkbox-box">
+            <label>
+                <input type="checkbox" name="is_veg" {% if menuItem.is_veg %}checked{% endif %}>
+                Vegetarian
+            </label>
+        </div>
+
+        <label>IMAGE URL</label>
+        <div class="input-box">
+            <input type="url" name="picture" value="{{menuItem.picture}}">
+        </div>
+
+        <button type="submit">UPDATE ITEM</button>
+    </form>
+
+</div>
+
+</body>
+</html>

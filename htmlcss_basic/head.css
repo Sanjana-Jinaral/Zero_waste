@@ -1,0 +1,36 @@
+body{
+            background-color: #414141;
+            color: #fff;
+        }
+
+div {
+ margin: 10px;
+ padding: 10px;
+ border: 1px solid rgb(230, 247, 42);
+ background-color: rgba(81, 219, 81, 0.533);
+
+ width: 200px;
+ height: 100px;
+}
+
+/* div {
+ position: absolute;
+ top: 10px;
+ left: 50px;
+} */
+
+#idname {
+ color: rgb(17, 219, 199);
+}
+
+.classname {
+ color: rgb(237, 32, 162);
+}
+
+
+span {
+ display: block;
+}
+
+
+

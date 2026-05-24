@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Update Restaurant</title>
+    {% load static %}
+
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: linear-gradient(to right, #6db34f, #7ccf5a);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+
+        .card {
+            background: #8bc271;
+            padding: 40px;
+            border-radius: 20px;
+            width: 400px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+            text-align: center;
+        }
+
+        .icon-circle {
+            width: 80px;
+            height: 80px;
+            background: #3f9c8f;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: -70px auto 20px auto;
+            font-size: 30px;
+            color: white;
+        }
+
+        h1 {
+            margin-bottom: 20px;
+            color: #2f2f2f;
+        }
+
+        label {
+            display: block;
+            margin-top: 15px;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #2f2f2f;
+            text-align: left;
+        }
+
+        input {
+            width: 100%;
+            padding: 12px;
+            border-radius: 10px;
+            border: none;
+            outline: none;
+            background: #cfe3c6;
+            font-size: 14px;
+        }
+
+        button {
+            margin-top: 25px;
+            width: 100%;
+            padding: 14px;
+            border: none;
+            border-radius: 12px;
+            background: #3f9c8f;
+            color: white;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+
+        button:hover {
+            background: #357f75;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="card">
+        <div class="icon-circle">✏️</div>
+        <h1>Update Restaurant</h1>
+
+        <form method="POST" action="{% url 'update_restaurant' restaurant.id %}">
+            {% csrf_token %}
+
+            <label>Restaurant Name</label>
+            <input type="text" name="name" value="{{restaurant.name}}" required>
+
+            <label>Picture URL</label>
+            <input type="url" name="picture" value="{{restaurant.picture}}" required>
+
+            <label>Cuisine</label>
+            <input type="text" name="cuisine" value="{{restaurant.cuisine}}" required>
+
+            <label>Rating</label>
+            <input type="number" name="rating" step="0.1" min="0" max="5" value="{{restaurant.rating}}" required>
+
+            <button type="submit">UPDATE RESTAURANT</button>
+        </form>
+    </div>
+
+</body>
+</html>

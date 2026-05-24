@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Menu</title>
+
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #8BC34A, #4CAF50);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .main-box {
+            background: rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(10px);
+            padding: 30px;
+            border-radius: 15px;
+            width: 90%;
+            max-width: 1000px;
+            box-shadow: 0px 10px 25px rgba(0,0,0,0.2);
+        }
+
+        h1, h2, h3 {
+            margin: 10px 0;
+            color: #222;
+        }
+
+        .top-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .btn {
+            padding: 8px 14px;
+            background: #3f9c91;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            text-decoration: none;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .btn:hover {
+            background: #357f76;
+        }
+
+        .restaurant-img {
+            display: block;
+            margin: 15px auto;
+            border-radius: 10px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            background: rgba(255,255,255,0.6);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        thead {
+            background: #3f9c91;
+            color: white;
+        }
+
+        th, td {
+            padding: 12px;
+            text-align: center;
+        }
+
+        tbody tr:nth-child(even) {
+            background: rgba(255,255,255,0.4);
+        }
+
+        img {
+            border-radius: 8px;
+        }
+
+        .message {
+            color: green;
+            text-align: center;
+            margin-bottom: 10px;
+        }
+
+        .empty {
+            text-align: center;
+            font-weight: bold;
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="main-box">
+
+    {% if messages %}
+        {% for message in messages %}
+            <p class="message">{{ message }}</p>
+        {% endfor %}
+    {% endif %}
+
+    <div class="top-bar">
+        <h2>Welcome : {{username}}</h2>
+        <a href="{% url 'show_cart_page' username %}" class="btn">View Cart</a>
+    </div>
+
+    <h1>Menu For {{ restaurant.name }}</h1>
+    <h3>Cuisine : {{ restaurant.cuisine }}</h3>
+
+    <img src="{{ restaurant.picture }}" alt="{{ restaurant.name }}" width="200" class="restaurant-img">
+
+    <h2>Menu Items</h2>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Image</th>
+                <th>Name</th>
+                <th>Description</th>
+                <th>Price</th>
+                <th>Type</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+
+        <tbody>
+            {% for item in menu_items %}
+            <tr>
+                <td>
+                    <img src="{{ item.picture }}" alt="{{ item.name }}" width="80">
+                </td>
+                <td>{{ item.name }}</td>
+                <td>{{ item.description }}</td>
+                <td>₹ {{ item.price }}</td>
+                <td>
+                    {% if item.is_veg %}
+                        Veg
+                    {% else %}
+                        Non-Veg
+                    {% endif %}
+                </td>
+                <td>
+                    <form method="POST" action="{% url 'add_to_cart' item.id username %}">
+                        {% csrf_token %}
+                        <button type="submit" class="btn"
+                        onclick="return confirm('Are you sure you want to add to cart?')">
+                            Add
+                        </button>
+                    </form>
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="6" class="empty">No menu items yet</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+</div>
+
+</body>
+</html>
